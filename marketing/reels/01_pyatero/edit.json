@@ -1,0 +1,122 @@
+{
+  "output": "out/01_pyatero.mp4",
+  "voice": "raw/master.mp4",
+  "clip_audio": false,
+  "srt": "subs.srt",
+  "clips": [
+    {
+      "src": "raw/master.mp4",
+      "in": 0.0,
+      "out": 2.8
+    },
+    {
+      "src": "raw/S02_face_1.mp4",
+      "in": 0.5,
+      "out": 0.72
+    },
+    {
+      "src": "raw/S02_face_2.mp4",
+      "in": 0.5,
+      "out": 0.72
+    },
+    {
+      "src": "raw/S02_face_3.mp4",
+      "in": 0.5,
+      "out": 0.72
+    },
+    {
+      "src": "raw/S02_face_4.mp4",
+      "in": 0.5,
+      "out": 0.72
+    },
+    {
+      "src": "raw/S02_face_5.mp4",
+      "in": 0.5,
+      "out": 0.72
+    },
+    {
+      "src": "raw/S03_screen.mp4",
+      "in": 0,
+      "out": 2.4
+    },
+    {
+      "src": "raw/S05_ruins.mp4",
+      "in": 1,
+      "out": 3.8
+    },
+    {
+      "src": "raw/S05_ruins.mp4",
+      "in": 3.8,
+      "out": 6.2
+    },
+    {
+      "src": "raw/S06_tool.mp4",
+      "in": 1,
+      "out": 4.3
+    },
+    {
+      "src": "raw/S07_plant.mp4",
+      "in": 1,
+      "out": 2.1
+    },
+    {
+      "src": "raw/S08_errors.mp4",
+      "in": 0.3,
+      "out": 3.5
+    },
+    {
+      "src": "raw/master.mp4",
+      "in": 19.1,
+      "out": 23.9
+    }
+  ],
+  "cards": [
+    {
+      "text": "300 ЧЕЛОВЕК",
+      "start": 0.0,
+      "end": 2.8
+    },
+    {
+      "text": "НАС 5",
+      "start": 2.8,
+      "end": 3.9
+    },
+    {
+      "text": "+1 ИИ",
+      "start": 3.9,
+      "end": 6.3
+    },
+    {
+      "text": "«РУБЕЖ»",
+      "start": 6.3,
+      "end": 9.1,
+      "pos": "center",
+      "size": 120
+    },
+    {
+      "text": "25 ЛЕТ ПОСЛЕ РАЗЛОМА",
+      "start": 9.1,
+      "end": 11.5
+    },
+    {
+      "text": "НЕ ОРУЖИЕ",
+      "start": 11.5,
+      "end": 14.8
+    },
+    {
+      "text": "ЗАВОД",
+      "start": 14.8,
+      "end": 15.9
+    },
+    {
+      "text": "КАЖДЫЙ БАГ",
+      "start": 15.9,
+      "end": 19.1
+    },
+    {
+      "text": "ДЕНЬ 1",
+      "start": 19.1,
+      "end": 23.9
+    }
+  ]
+}

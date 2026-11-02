@@ -1,0 +1,32 @@
+{
+  "output": "out/03_zavod.mp4",
+  "voice": "raw/master.mp4",
+  "clip_audio": false,
+  "srt": "subs.srt",
+  "clips": [
+    {"src": "raw/S01_backpack.mp4", "in": 0.3, "out": 3.1},
+    {"src": "raw/S02_pump.mp4", "in": 1, "out": 2.2},
+    {"src": "raw/S02_factory.mp4", "in": 1, "out": 2.2},
+    {"src": "raw/S02_rail.mp4", "in": 1, "out": 2.3},
+    {"src": "raw/S02_factory.mp4", "in": 2.5, "out": 5.8},
+    {"src": "raw/S04_fix.mp4", "in": 0.5, "out": 1.7},
+    {"src": "raw/S04_supply.mp4", "in": 0.5, "out": 1.7},
+    {"src": "raw/S04_guard.mp4", "in": 0.5, "out": 1.7},
+    {"src": "raw/S02_factory.mp4", "in": 0, "out": 2.0},
+    {"src": "raw/S02_rail.mp4", "in": 2.5, "out": 4.5},
+    {"src": "raw/master.mp4", "in": 17.4, "out": 20.2},
+    {"src": "raw/S08_zip.mp4", "in": 0.3, "out": 3.1}
+  ],
+  "cards": [
+    {"text": "НЕ ВЛЕЗЕТ В РЮКЗАК", "start": 0.0, "end": 2.8},
+    {"text": "НАСОСНАЯ", "start": 2.8, "end": 4.0},
+    {"text": "ЗАВОД", "start": 4.0, "end": 5.2},
+    {"text": "ЖД-УЗЕЛ", "start": 5.2, "end": 6.5},
+    {"text": "ЗАХВАТ = ДЕНЬГИ", "start": 6.5, "end": 9.8},
+    {"text": "ЧИНИ · СНАБЖАЙ · ОХРАНЯЙ", "start": 9.8, "end": 13.4},
+    {"text": "НЕТ ИНЖЕНЕРОВ — НЕТ ПРИБЫЛИ", "start": 13.4, "end": 15.4, "pos": "center"},
+    {"text": "НЕТ ОХРАНЫ — НЕТ ЗАВОДА", "start": 15.4, "end": 17.4, "pos": "center"},
+    {"text": "НАЙТИ vs УДЕРЖАТЬ", "start": 17.4, "end": 20.2},
+    {"text": "НЕ ВЛЕЗЕТ", "start": 20.2, "end": 23.0}
+  ]
+}

@@ -1,0 +1,131 @@
+// Copyright (c) 2024 EngineWire Contributors
+
+#include "Foundation/BridgeHelpers/Security/McpAssetPathCanonical.h"
+#include "Foundation/BridgeHelpers/Security/McpProjectFileWrite.h"
+#include "EngineWireSubsystem.h"
+#include "Foundation/BridgeHelpers/McpHelpers.h"
+#include "Foundation/HandlerUtils/McpHandlerUtils.h"
+
+#include "Dom/JsonObject.h"
+#include "Serialization/JsonSerializer.h"
+#include "Serialization/JsonWriter.h"
+#include "HAL/PlatformFileManager.h"
+#include "Misc/EngineVersionComparison.h"
+#include "Misc/FileHelper.h"
+#include "Misc/Paths.h"
+
+#include "AssetRegistry/AssetRegistryModule.h"
+#include "Engine/World.h"
+
+bool UEngineWireSubsystem::HandleGenerateReport(
+    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+  if (!Payload.IsValid()) {
+    SendAutomationResponse(Socket, RequestId, false,
+                           TEXT("generate_report payload missing"), nullptr,
+                           TEXT("INVALID_PAYLOAD"));
+    return true;
+  }
+
+  FString Directory;
+  Payload->TryGetStringField(TEXT("directory"), Directory);
+  if (Directory.IsEmpty()) {
+    Directory = TEXT("/Game");
+  }
+
+  McpAssetPathCanonical::MapContentRootInline(Directory);
+
+  FString ReportType;
+  Payload->TryGetStringField(TEXT("reportType"), ReportType);
+  if (ReportType.IsEmpty()) {
+    ReportType = TEXT("Summary");
+  }
+
+  FString OutputPath;
+  Payload->TryGetStringField(TEXT("outputPath"), OutputPath);
+
+  FAssetRegistryModule &AssetRegistryModule =
+      FModuleManager::LoadModuleChecked<FAssetRegistryModule>(
+          TEXT("AssetRegistry"));
+  FARFilter Filter;
+  Filter.bRecursivePaths = true;
+  if (!Directory.IsEmpty()) {
+    Filter.PackagePaths.Add(FName(*Directory));
+  }
+
+  // NOTE: ScanPathsSynchronous() was removed to prevent GameThread blocking.
+  // Asset listing uses cached AssetRegistry data exclusively.
+  // LIMITATION: Assets not yet indexed by the editor's background scanner
+  // will NOT appear. Use Content Browser "Rescan" or rescan_content_directory.
+  TArray<FAssetData> AssetList;
+  AssetRegistryModule.Get().GetAssets(Filter, AssetList);
+  const int32 Scanned = AssetList.Num();
+  // unreferenced: only the assets no other package uses, hard or soft, as the packages on disk record it. A level is
+  // where play starts and a redirector stands in for a moved asset, so neither is listed.
+  if (ReportType.Equals(TEXT("unreferenced"), ESearchCase::IgnoreCase)) {
+    IAssetRegistry &Registry = AssetRegistryModule.Get();
+    AssetList.RemoveAll([&Registry](const FAssetData &Asset) {
+      if (Asset.IsRedirector() || Asset.GetClass() == UWorld::StaticClass()) {
+        return true;
+      }
+      TArray<FName> Referencers;
+      Registry.GetReferencers(Asset.PackageName, Referencers);
+      Referencers.Remove(Asset.PackageName);
+      return Referencers.Num() > 0;
+    });
+  }
+
+  TArray<TSharedPtr<FJsonValue>> AssetsArray;
+  for (const FAssetData &Asset : AssetList) {
+    TSharedPtr<FJsonObject> AssetObj = McpHandlerUtils::CreateResultObject();
+    AssetObj->SetStringField(TEXT("name"), Asset.AssetName.ToString());
+    AssetObj->SetStringField(TEXT("path"),
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+                             Asset.GetSoftObjectPath().ToString());
+    AssetObj->SetStringField(TEXT("class"), Asset.AssetClassPath.ToString());
+#else
+                             Asset.ToSoftObjectPath().ToString());
+    AssetObj->SetStringField(TEXT("class"), Asset.AssetClass.ToString());
+#endif
+    AssetsArray.Add(MakeShared<FJsonValueObject>(AssetObj));
+  }
+
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+  Resp->SetBoolField(TEXT("success"), true);
+  Resp->SetStringField(TEXT("directory"), Directory);
+  Resp->SetStringField(TEXT("reportType"), ReportType);
+  Resp->SetNumberField(TEXT("assetCount"), AssetList.Num());
+  Resp->SetNumberField(TEXT("scanned"), Scanned);
+  Resp->SetArrayField(TEXT("assets"), AssetsArray);
+
+  bool bFileWritten = false;
+  if (!OutputPath.IsEmpty()) {
+    // The shared project-file resolver: traversal, device names, containment, and no link on the way (a checked
+    // spelling alone let a symbolic link under the project carry the report outside it).
+    FString AbsoluteOutput;
+    FString PathError;
+    if (!McpResolveProjectFilePath(OutputPath, AbsoluteOutput, PathError)) {
+      SendAutomationError(Socket, RequestId, PathError, TEXT("SECURITY_VIOLATION"));
+      return true;
+    }
+
+    FString FileContents;
+    FJsonSerializer::Serialize(Resp.ToSharedRef(), TJsonWriterFactory<>::Create(&FileContents));
+    FString WriteError;
+    bFileWritten = McpWriteProjectText(AbsoluteOutput, FileContents, WriteError);
+    if (!bFileWritten) {
+      UE_LOG(LogEngineWireSubsystem, Warning, TEXT("%s"), *WriteError); // the reply's warnings say why
+    }
+  }
+
+  if (!OutputPath.IsEmpty()) {
+    Resp->SetStringField(TEXT("outputPath"), OutputPath);
+    Resp->SetBoolField(TEXT("fileWritten"), bFileWritten);
+  }
+
+  const FString Message = !ReportType.Equals(TEXT("unreferenced"), ESearchCase::IgnoreCase) ? FString(TEXT("Asset report generated"))
+      : FString::Printf(TEXT("%d of %d asset(s) under %s are unreferenced: no saved package refers to them. A primary asset the "
+                             "asset manager cooks, or one code loads by path, can still be in use."), AssetList.Num(), Scanned, *Directory);
+  SendAutomationResponse(Socket, RequestId, true, Message, Resp, FString());
+  return true;
+}

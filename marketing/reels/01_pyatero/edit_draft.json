@@ -1,0 +1,118 @@
+{
+  "output": "out/01_pyatero_draft.mp4",
+  "voice": "raw/vo_tts.wav",
+  "clip_audio": false,
+  "srt": "subs_draft.srt",
+  "clips": [
+    {
+      "src": "raw/S05_ruins.mp4",
+      "in": 0.0,
+      "out": 2.76,
+      "speed": 1.0
+    },
+    {
+      "color": "#0d0f10",
+      "dur": 1.421
+    },
+    {
+      "src": "raw/S03_screen.mp4",
+      "in": 0.0,
+      "out": 3.032,
+      "speed": 1.0
+    },
+    {
+      "src": "raw/S07_plant.mp4",
+      "in": 0.0,
+      "out": 3.388,
+      "speed": 0.8
+    },
+    {
+      "src": "raw/S05_ruins.mp4",
+      "in": 3.5,
+      "out": 6.082,
+      "speed": 1.0
+    },
+    {
+      "src": "raw/S06_tool.mp4",
+      "in": 0.5,
+      "out": 3.334,
+      "speed": 1.0
+    },
+    {
+      "src": "raw/S07_plant.mp4",
+      "in": 4.0,
+      "out": 5.794,
+      "speed": 1.0
+    },
+    {
+      "src": "raw/S08_errors.mp4",
+      "in": 0.0,
+      "out": 3.856,
+      "speed": 1.0
+    },
+    {
+      "color": "#0d0f10",
+      "dur": 1.298
+    },
+    {
+      "src": "raw/S06_tool.mp4",
+      "in": 4.3,
+      "out": 8.108,
+      "speed": 1.0
+    }
+  ],
+  "cards": [
+    {
+      "text": "300 ЧЕЛОВЕК",
+      "start": 0.0,
+      "end": 2.76
+    },
+    {
+      "text": "НАС 5",
+      "start": 2.76,
+      "end": 4.181
+    },
+    {
+      "text": "+1 ИИ",
+      "start": 4.181,
+      "end": 7.212
+    },
+    {
+      "text": "«РУБЕЖ»",
+      "start": 7.212,
+      "end": 11.447,
+      "pos": "center",
+      "size": 120
+    },
+    {
+      "text": "25 ЛЕТ ПОСЛЕ РАЗЛОМА",
+      "start": 11.447,
+      "end": 14.03
+    },
+    {
+      "text": "НЕ ОРУЖИЕ",
+      "start": 14.03,
+      "end": 16.863
+    },
+    {
+      "text": "ЗАВОД",
+      "start": 16.863,
+      "end": 18.657
+    },
+    {
+      "text": "КАЖДЫЙ БАГ",
+      "start": 18.657,
+      "end": 22.513
+    },
+    {
+      "text": "ДЕНЬ 1",
+      "start": 22.513,
+      "end": 23.811
+    },
+    {
+      "text": "5 vs 300",
+      "start": 23.811,
+      "end": 27.619
+    }
+  ]
+}

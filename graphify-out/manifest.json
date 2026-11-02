@@ -1,0 +1,404 @@
+{
+  ".claude/settings.json": {
+    "mtime": 1793554019.6295645,
+    "seen": 1793565408.1976287,
+    "ast_hash": "57766c167aa07580edcd4647ce79993d",
+    "semantic_hash": "57766c167aa07580edcd4647ce79993d"
+  },
+  ".claude/skills/ig-caption/caption.py": {
+    "mtime": 1793560608.0452838,
+    "seen": 1793565408.1976287,
+    "ast_hash": "b8814cb84d0a30b4a74cdefaf60fac0b",
+    "semantic_hash": "b8814cb84d0a30b4a74cdefaf60fac0b"
+  },
+  ".claude/skills/ig-human/detect.py": {
+    "mtime": 1793560608.0511434,
+    "seen": 1793565408.1976287,
+    "ast_hash": "275bd1a8fcffd824aaddbcda74a1bddc",
+    "semantic_hash": "275bd1a8fcffd824aaddbcda74a1bddc"
+  },
+  ".claude/skills/ig-human/humanize.py": {
+    "mtime": 1793560608.0531864,
+    "seen": 1793565408.1976287,
+    "ast_hash": "70002eca86aec422e6ba6fe3a0b39a09",
+    "semantic_hash": "70002eca86aec422e6ba6fe3a0b39a09"
+  },
+  ".claude/skills/ig-human/slop.json": {
+    "mtime": 1793560608.0526757,
+    "seen": 1793565408.1976287,
+    "ast_hash": "9d796734d5a3dd03dfe0d0f7bcbf06c7",
+    "semantic_hash": "9d796734d5a3dd03dfe0d0f7bcbf06c7"
+  },
+  ".claude/skills/ig-profile/rubric.json": {
+    "mtime": 1793560608.0572839,
+    "seen": 1793565408.1976287,
+    "ast_hash": "b283ddc9641bece54ee9747e6c09b02e",
+    "semantic_hash": "b283ddc9641bece54ee9747e6c09b02e"
+  },
+  ".claude/skills/ig-reel/beats.py": {
+    "mtime": 1793560608.0603712,
+    "seen": 1793565408.1976287,
+    "ast_hash": "39ce11149cc0c9e9ed37f50d721b4c1a",
+    "semantic_hash": "39ce11149cc0c9e9ed37f50d721b4c1a"
+  },
+  ".claude/skills/ig-reel/hooks.json": {
+    "mtime": 1793560608.0603712,
+    "seen": 1793565408.1976287,
+    "ast_hash": "2b42fc1d095d36820582f5caea6fc3c4",
+    "semantic_hash": "2b42fc1d095d36820582f5caea6fc3c4"
+  },
+  ".claude/skills/ig-reel/hookscore.py": {
+    "mtime": 1793560608.0593624,
+    "seen": 1793565408.1976287,
+    "ast_hash": "8ab863b12a8278561a34960de2301d75",
+    "semantic_hash": "8ab863b12a8278561a34960de2301d75"
+  },
+  ".claude/skills/ig-viral/swipe.py": {
+    "mtime": 1793560608.0683067,
+    "seen": 1793565408.1976287,
+    "ast_hash": "59ed1b25545fefb7b2abc529736bfe34",
+    "semantic_hash": "59ed1b25545fefb7b2abc529736bfe34"
+  },
+  ".mcp.json": {
+    "mtime": 1793554019.3144474,
+    "seen": 1793565408.1976287,
+    "ast_hash": "7a00295c26d7cb563f2e532d127c60a1",
+    "semantic_hash": "7a00295c26d7cb563f2e532d127c60a1"
+  },
+  "marketing/reels/01_pyatero/edit.json": {
+    "mtime": 1793562203.7897952,
+    "seen": 1793565408.1976287,
+    "ast_hash": "7262135417df011e5b0559815f1a8731",
+    "semantic_hash": "7262135417df011e5b0559815f1a8731"
+  },
+  "marketing/reels/01_pyatero/edit_draft.json": {
+    "mtime": 1793562933.6571412,
+    "seen": 1793565408.1976287,
+    "ast_hash": "d777b4d66b6a3ccc6e29ba4d94a795e3",
+    "semantic_hash": "d777b4d66b6a3ccc6e29ba4d94a795e3"
+  },
+  "marketing/reels/01_pyatero/edit_draft_v2.json": {
+    "mtime": 1793564810.2084343,
+    "seen": 1793565408.1976287,
+    "ast_hash": "b732105c539911f924b5755b15628522",
+    "semantic_hash": "b732105c539911f924b5755b15628522"
+  },
+  "marketing/reels/02_bez_mutantov/edit.json": {
+    "mtime": 1793562203.790815,
+    "seen": 1793565408.1976287,
+    "ast_hash": "9a07985bb6ed8c4a3e7b1c5029fad523",
+    "semantic_hash": "9a07985bb6ed8c4a3e7b1c5029fad523"
+  },
+  "marketing/reels/03_zavod/edit.json": {
+    "mtime": 1793561870.566817,
+    "seen": 1793565408.1976287,
+    "ast_hash": "ce4eb17b6c45dc4166513c2f65897c0f",
+    "semantic_hash": "ce4eb17b6c45dc4166513c2f65897c0f"
+  },
+  "tools/reels/beats_ru.py": {
+    "mtime": 1793560823.608674,
+    "seen": 1793565408.1976287,
+    "ast_hash": "ce2e4509f888e6ed801093c0ac2131e9",
+    "semantic_hash": "ce2e4509f888e6ed801093c0ac2131e9"
+  },
+  "tools/reels/make_reel.py": {
+    "mtime": 1793564455.2033248,
+    "seen": 1793565408.1976287,
+    "ast_hash": "527c579f7ff75aa4d6115fb1b5d0acf8",
+    "semantic_hash": "527c579f7ff75aa4d6115fb1b5d0acf8"
+  },
+  "tools/reels/render_screen.py": {
+    "mtime": 1793562967.7356036,
+    "seen": 1793565408.1976287,
+    "ast_hash": "99a7f65519be2b65dbf640dba502640b",
+    "semantic_hash": "99a7f65519be2b65dbf640dba502640b"
+  },
+  ".claude/agents/economy-designer.md": {
+    "mtime": 1793553987.1284645,
+    "seen": 1793565408.1976287,
+    "ast_hash": "78d4fe04a9284c14737ce217dccb2898",
+    "semantic_hash": "78d4fe04a9284c14737ce217dccb2898"
+  },
+  ".claude/agents/game-designer.md": {
+    "mtime": 1793553986.8060505,
+    "seen": 1793565408.1976287,
+    "ast_hash": "0b90b295f32e706d27f11c86be75e3ea",
+    "semantic_hash": "0b90b295f32e706d27f11c86be75e3ea"
+  },
+  ".claude/agents/level-designer.md": {
+    "mtime": 1793553988.3566153,
+    "seen": 1793565408.1976287,
+    "ast_hash": "681ec6df996adcf84203df060cddf302",
+    "semantic_hash": "681ec6df996adcf84203df060cddf302"
+  },
+  ".claude/agents/lore-keeper.md": {
+    "mtime": 1793553987.423625,
+    "seen": 1793565408.1976287,
+    "ast_hash": "6126c97426bd8332922ef556699da1a4",
+    "semantic_hash": "6126c97426bd8332922ef556699da1a4"
+  },
+  ".claude/agents/network-programmer.md": {
+    "mtime": 1793553988.0527542,
+    "seen": 1793565408.1976287,
+    "ast_hash": "d78f3e2385b4cb833dc35c2124052cd1",
+    "semantic_hash": "d78f3e2385b4cb833dc35c2124052cd1"
+  },
+  ".claude/agents/producer.md": {
+    "mtime": 1793553986.4466455,
+    "seen": 1793565408.1976287,
+    "ast_hash": "effb92a2bc3b6f6ec78612767f2a9e69",
+    "semantic_hash": "effb92a2bc3b6f6ec78612767f2a9e69"
+  },
+  ".claude/agents/qa-lead.md": {
+    "mtime": 1793553988.68434,
+    "seen": 1793565408.1976287,
+    "ast_hash": "53cd30b18bd63aee344e6697d7726264",
+    "semantic_hash": "53cd30b18bd63aee344e6697d7726264"
+  },
+  ".claude/agents/unreal-specialist.md": {
+    "mtime": 1793553987.738723,
+    "seen": 1793565408.1976287,
+    "ast_hash": "da0c043cff8a1fcb251e3d9fc6001661",
+    "semantic_hash": "da0c043cff8a1fcb251e3d9fc6001661"
+  },
+  ".claude/skills/SOURCE-instagram-agent.txt": {
+    "mtime": 1793560608.0878184,
+    "seen": 1793565408.1976287,
+    "ast_hash": "1f532c4befe775f5d749f4fcad70e635",
+    "semantic_hash": "1f532c4befe775f5d749f4fcad70e635"
+  },
+  ".claude/skills/SOURCE-quodsoler.txt": {
+    "mtime": 1793553837.7253356,
+    "seen": 1793565408.1976287,
+    "ast_hash": "aa11125a615bcdc558ecb643114e0611",
+    "semantic_hash": "aa11125a615bcdc558ecb643114e0611"
+  },
+  ".claude/skills/ig-audit/SKILL.md": {
+    "mtime": 1793560608.0427089,
+    "seen": 1793565408.1976287,
+    "ast_hash": "b7bc5a4c70146f037a37213afacf7f7a",
+    "semantic_hash": "b7bc5a4c70146f037a37213afacf7f7a"
+  },
+  ".claude/skills/ig-caption/SKILL.md": {
+    "mtime": 1793560608.0442548,
+    "seen": 1793565408.1976287,
+    "ast_hash": "4c17ec8cab8cc2020c15c9a326b10117",
+    "semantic_hash": "4c17ec8cab8cc2020c15c9a326b10117"
+  },
+  ".claude/skills/ig-carousel/SKILL.md": {
+    "mtime": 1793560608.0468159,
+    "seen": 1793565408.1976287,
+    "ast_hash": "430743f25ee71cb1cfe4792ac44d2517",
+    "semantic_hash": "430743f25ee71cb1cfe4792ac44d2517"
+  },
+  ".claude/skills/ig-comment/SKILL.md": {
+    "mtime": 1793560608.0480826,
+    "seen": 1793565408.1976287,
+    "ast_hash": "8a22da3eb2ecaa75fadc40ff066db6d8",
+    "semantic_hash": "8a22da3eb2ecaa75fadc40ff066db6d8"
+  },
+  ".claude/skills/ig-dm/SKILL.md": {
+    "mtime": 1793560608.049623,
+    "seen": 1793565408.1976287,
+    "ast_hash": "6f1d71baa63107c099320459fd85af6d",
+    "semantic_hash": "6f1d71baa63107c099320459fd85af6d"
+  },
+  ".claude/skills/ig-human/SKILL.md": {
+    "mtime": 1793560608.0516527,
+    "seen": 1793565408.1976287,
+    "ast_hash": "c9f032593b08010abd1ec9ac410c2ad3",
+    "semantic_hash": "c9f032593b08010abd1ec9ac410c2ad3"
+  },
+  ".claude/skills/ig-plan/SKILL.md": {
+    "mtime": 1793560608.054723,
+    "seen": 1793565408.1976287,
+    "ast_hash": "98f39e50632816ccdf8ff21dd992f3ec",
+    "semantic_hash": "98f39e50632816ccdf8ff21dd992f3ec"
+  },
+  ".claude/skills/ig-profile/SKILL.md": {
+    "mtime": 1793560608.056255,
+    "seen": 1793565408.1976287,
+    "ast_hash": "4a0792aaa0cba35791ba81531287cb0e",
+    "semantic_hash": "4a0792aaa0cba35791ba81531287cb0e"
+  },
+  ".claude/skills/ig-reel/SKILL.md": {
+    "mtime": 1793560608.0593624,
+    "seen": 1793565408.1976287,
+    "ast_hash": "7d9ccce8e115ab5016d31ce558540179",
+    "semantic_hash": "7d9ccce8e115ab5016d31ce558540179"
+  },
+  ".claude/skills/ig-reply/SKILL.md": {
+    "mtime": 1793560608.063306,
+    "seen": 1793565408.1976287,
+    "ast_hash": "02529c4d145c05c18dcefe561740ad6d",
+    "semantic_hash": "02529c4d145c05c18dcefe561740ad6d"
+  },
+  ".claude/skills/ig-repurpose/SKILL.md": {
+    "mtime": 1793560608.064287,
+    "seen": 1793565408.1976287,
+    "ast_hash": "5eb3eb15f3c478097e4e72ff0423d450",
+    "semantic_hash": "5eb3eb15f3c478097e4e72ff0423d450"
+  },
+  ".claude/skills/ig-story/SKILL.md": {
+    "mtime": 1793560608.0668168,
+    "seen": 1793565408.1976287,
+    "ast_hash": "71ec5cdc486f1aafb3302cfe9e1e82fe",
+    "semantic_hash": "71ec5cdc486f1aafb3302cfe9e1e82fe"
+  },
+  ".claude/skills/ig-viral/SKILL.md": {
+    "mtime": 1793560608.0688095,
+    "seen": 1793565408.1976287,
+    "ast_hash": "356678eb631bdd5e34fa8a3fb121a462",
+    "semantic_hash": "356678eb631bdd5e34fa8a3fb121a462"
+  },
+  "CLAUDE.md": {
+    "mtime": 1793560926.3350556,
+    "seen": 1793565408.1976287,
+    "ast_hash": "9a3ebecee8add94231598521d28c8544",
+    "semantic_hash": "9a3ebecee8add94231598521d28c8544"
+  },
+  "docs/00_\u041f\u0440\u043e\u0446\u0435\u0441\u0441_\u0438_\u043f\u043b\u0430\u043d_\u0440\u0430\u0437\u0440\u0430\u0431\u043e\u0442\u043a\u0438.md": {
+    "mtime": 1793554042.2527785,
+    "seen": 1793565408.1976287,
+    "ast_hash": "25a909465324ebc0ffdadbbff453f055",
+    "semantic_hash": "25a909465324ebc0ffdadbbff453f055"
+  },
+  "docs/01_\u041a\u0430\u043d\u043e\u043d.md": {
+    "mtime": 1793553908.2746336,
+    "seen": 1793565408.1976287,
+    "ast_hash": "67ca2fa67bfb53bd57e41172cbe6a8f7",
+    "semantic_hash": "67ca2fa67bfb53bd57e41172cbe6a8f7"
+  },
+  "docs/marketing/01_\u0421\u0442\u0440\u0430\u0442\u0435\u0433\u0438\u044f_\u043f\u0440\u043e\u0434\u0432\u0438\u0436\u0435\u043d\u0438\u044f.md": {
+    "mtime": 1793560680.3179903,
+    "seen": 1793565408.1976287,
+    "ast_hash": "d147289fbac18134b7b7e0dff4bd0892",
+    "semantic_hash": "d147289fbac18134b7b7e0dff4bd0892"
+  },
+  "docs/marketing/02_\u0421\u0446\u0435\u043d\u0430\u0440\u0438\u0438_\u0440\u0438\u043b\u0441\u043e\u0432.md": {
+    "mtime": 1793560925.7326355,
+    "seen": 1793565408.1976287,
+    "ast_hash": "db8275109cb8f62e35fe80b7d68c3d69",
+    "semantic_hash": "db8275109cb8f62e35fe80b7d68c3d69"
+  },
+  "docs/marketing/03_\u0428\u043e\u0442-\u043b\u0438\u0441\u0442_\u0440\u0438\u043b\u0441\u044b_1-3.md": {
+    "mtime": 1793561846.528504,
+    "seen": 1793565408.1976287,
+    "ast_hash": "ae8f6aafece0ac843127c444854f5b57",
+    "semantic_hash": "ae8f6aafece0ac843127c444854f5b57"
+  },
+  "docs/marketing/04_\u041f\u0440\u043e\u043c\u043f\u0442\u044b_Flow.md": {
+    "mtime": 1793562143.9000866,
+    "seen": 1793565408.1976287,
+    "ast_hash": "3da05c4b34ed3982ac8fc399ba881e92",
+    "semantic_hash": "3da05c4b34ed3982ac8fc399ba881e92"
+  },
+  "docs/marketing/05_\u042d\u0442\u0430\u043b\u043e\u043d\u044b_\u0441\u0442\u0438\u043b\u044f.md": {
+    "mtime": 1793564488.5485265,
+    "seen": 1793565408.1976287,
+    "ast_hash": "682f91ccf5f321669555d161c48c01d6",
+    "semantic_hash": "682f91ccf5f321669555d161c48c01d6"
+  },
+  "docs/marketing/voice.md": {
+    "mtime": 1793564843.8699853,
+    "seen": 1793565408.1976287,
+    "ast_hash": "4c84eb9e911619e9a76847de1b6b5a4c",
+    "semantic_hash": "4c84eb9e911619e9a76847de1b6b5a4c"
+  },
+  "docs/tech/unreal_mcp_setup.md": {
+    "mtime": 1793554019.95358,
+    "seen": 1793565408.1976287,
+    "ast_hash": "0d7490d1ab6a35b68aca5bcb07f818e6",
+    "semantic_hash": "0d7490d1ab6a35b68aca5bcb07f818e6"
+  },
+  "marketing/reels/01_pyatero/script.txt": {
+    "mtime": 1793562106.8264344,
+    "seen": 1793565408.1976287,
+    "ast_hash": "44d1f8e71b6c761d2a431852b2dc9fdd",
+    "semantic_hash": "44d1f8e71b6c761d2a431852b2dc9fdd"
+  },
+  "marketing/reels/02_bez_mutantov/script.txt": {
+    "mtime": 1793561728.4640894,
+    "seen": 1793565408.1976287,
+    "ast_hash": "d3603da4bae94470e4397c7b3d1f414a",
+    "semantic_hash": "d3603da4bae94470e4397c7b3d1f414a"
+  },
+  "marketing/reels/03_zavod/script.txt": {
+    "mtime": 1793561735.2216125,
+    "seen": 1793565408.1976287,
+    "ast_hash": "e5e40108b6e828e2de8909b111b7ab55",
+    "semantic_hash": "e5e40108b6e828e2de8909b111b7ab55"
+  },
+  "marketing/reels/_screens/canon.txt": {
+    "mtime": 1793562202.640469,
+    "seen": 1793565408.1976287,
+    "ast_hash": "a01177d94dea80cf33cca24f0ac60651",
+    "semantic_hash": "a01177d94dea80cf33cca24f0ac60651"
+  },
+  "marketing/reels/_screens/claude.txt": {
+    "mtime": 1793562186.0013998,
+    "seen": 1793565408.1976287,
+    "ast_hash": "e3833be8997f09683b725f53fed19f22",
+    "semantic_hash": "e3833be8997f09683b725f53fed19f22"
+  },
+  "marketing/reels/_screens/errors.txt": {
+    "mtime": 1793562186.0317678,
+    "seen": 1793565408.1976287,
+    "ast_hash": "7563bb12b090895637655968aea1ff43",
+    "semantic_hash": "7563bb12b090895637655968aea1ff43"
+  },
+  "tools/reels/README.md": {
+    "mtime": 1793560926.0421948,
+    "seen": 1793565408.1976287,
+    "ast_hash": "7ff308907a79429d97c620aa6038546f",
+    "semantic_hash": "7ff308907a79429d97c620aa6038546f"
+  },
+  "tools/reels/fonts/OFL-Montserrat.txt": {
+    "mtime": 1793564375.7350001,
+    "seen": 1793565408.1976287,
+    "ast_hash": "2fdec60339ef243dcaca42a0c7bce717",
+    "semantic_hash": "2fdec60339ef243dcaca42a0c7bce717"
+  },
+  "marketing/style/v1/A1_station.jpg": {
+    "mtime": 1793564059.376805,
+    "seen": 1793565408.1976287,
+    "ast_hash": "eb865c1b340e3c9f5585646710f1c9e3",
+    "semantic_hash": "eb865c1b340e3c9f5585646710f1c9e3"
+  },
+  "marketing/style/v1/A2_mask.jpg": {
+    "mtime": 1793564048.4227235,
+    "seen": 1793565408.1976287,
+    "ast_hash": "76c71fc8ba477918dc47e3131f12c1cc",
+    "semantic_hash": "76c71fc8ba477918dc47e3131f12c1cc"
+  },
+  "marketing/style/v1/B1_station.jpg": {
+    "mtime": 1793564079.7238438,
+    "seen": 1793565408.1976287,
+    "ast_hash": "968f5059c0263d346db0ada00a94ff7e",
+    "semantic_hash": "968f5059c0263d346db0ada00a94ff7e"
+  },
+  "marketing/style/v1/B2_mask.jpg": {
+    "mtime": 1793564076.529766,
+    "seen": 1793565408.1976287,
+    "ast_hash": "72349a82196e94cfb71f62048ca2da06",
+    "semantic_hash": "72349a82196e94cfb71f62048ca2da06"
+  },
+  "marketing/style/v1/C1_station.jpg": {
+    "mtime": 1793564093.9639745,
+    "seen": 1793565408.1976287,
+    "ast_hash": "8ac5605d750183879ea0f6a5424131a0",
+    "semantic_hash": "8ac5605d750183879ea0f6a5424131a0"
+  },
+  "marketing/style/v1/C2_mask.jpg": {
+    "mtime": 1793564094.9949222,
+    "seen": 1793565408.1976287,
+    "ast_hash": "8f60f6c2af52c00477c185b950521e0c",
+    "semantic_hash": "8f60f6c2af52c00477c185b950521e0c"
+  },
+  "marketing/style_fonts.png": {
+    "mtime": 1793563390.9942007,
+    "seen": 1793565408.1976287,
+    "ast_hash": "b931efd2630f248b7d9c8fc5c9a5e56a",
+    "semantic_hash": "b931efd2630f248b7d9c8fc5c9a5e56a"
+  }
+}

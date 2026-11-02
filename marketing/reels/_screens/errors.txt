@@ -1,0 +1,7 @@
+$ python -c "for f in fs: print(f.get('id'))"
+Traceback (most recent call last):
+  File "<string>", line 5, in <module>
+    for f in fs: print(f.get('id'),f.get('name'))
+                       ^^^^^
+AttributeError: 'str' object has no attribute 'get'
+Exit code 1

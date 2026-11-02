@@ -1,0 +1,18 @@
+> claude
+● Bash(wc -l docs/*.md .claude/agents/*.md)
+  261 docs/00_Процесс_и_план_разработки.md
+  305 docs/01_Канон.md
+  198 docs/marketing/01_Стратегия_продвижения.md
+  453 docs/marketing/02_Сценарии_рилсов.md
+  130 docs/marketing/03_Шот-лист_рилсы_1-3.md
+  65 docs/marketing/04_Промпты_Flow.md
+  43 docs/marketing/voice.md
+  29 .claude/agents/economy-designer.md
+  33 .claude/agents/game-designer.md
+  26 .claude/agents/level-designer.md
+  27 .claude/agents/lore-keeper.md
+  38 .claude/agents/network-programmer.md
+  28 .claude/agents/producer.md
+  24 .claude/agents/qa-lead.md
+  29 .claude/agents/unreal-specialist.md
+  1689 total

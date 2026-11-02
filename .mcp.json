@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "unreal-engine": {
+      "command": "npx",
+      "args": ["-y", "unreal-engine-mcp-server@0.6.0"],
+      "env": {
+        "UE_PROJECT_PATH": "E:/Rubezh/Game/Rubezh.uproject"
+      }
+    }
+  }
+}

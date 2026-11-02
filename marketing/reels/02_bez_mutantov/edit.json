@@ -1,0 +1,111 @@
+{
+  "output": "out/02_bez_mutantov.mp4",
+  "voice": "raw/master.mp4",
+  "clip_audio": false,
+  "srt": "subs.srt",
+  "clips": [
+    {
+      "src": "raw/S01_canon.mp4",
+      "in": 0.2,
+      "out": 2.6
+    },
+    {
+      "src": "raw/S02_cross.mp4",
+      "in": 0.5,
+      "out": 1.6
+    },
+    {
+      "src": "raw/S03_cut.mp4",
+      "in": 0.5,
+      "out": 2.0
+    },
+    {
+      "src": "raw/S04_trash.mp4",
+      "in": 0.5,
+      "out": 2.9
+    },
+    {
+      "color": "#0d0f10",
+      "dur": 1.6
+    },
+    {
+      "src": "raw/S06_dogs.mp4",
+      "in": 0.5,
+      "out": 2.9
+    },
+    {
+      "src": "raw/S07_mask.mp4",
+      "in": 0.5,
+      "out": 3.7
+    },
+    {
+      "src": "raw/S08_snow.mp4",
+      "in": 0.5,
+      "out": 1.7
+    },
+    {
+      "src": "raw/S08_fuel.mp4",
+      "in": 0.5,
+      "out": 1.7
+    },
+    {
+      "src": "raw/S09_people.mp4",
+      "in": 0.5,
+      "out": 3.3
+    },
+    {
+      "src": "raw/master.mp4",
+      "in": 19.8,
+      "out": 21.9
+    },
+    {
+      "src": "raw/S06_dogs.mp4",
+      "in": 3.0,
+      "out": 4.2
+    }
+  ],
+  "cards": [
+    {
+      "text": "0 МУТАНТОВ",
+      "start": 0.0,
+      "end": 3.5
+    },
+    {
+      "text": "ВЫРЕЗАЛИ",
+      "start": 3.5,
+      "end": 7.4
+    },
+    {
+      "text": "КТО ОПАСЕН?",
+      "start": 7.4,
+      "end": 9.0,
+      "pos": "center",
+      "size": 96
+    },
+    {
+      "text": "СОБАКИ",
+      "start": 9.0,
+      "end": 11.4
+    },
+    {
+      "text": "ХИМИЯ",
+      "start": 11.4,
+      "end": 14.6
+    },
+    {
+      "text": "−30°",
+      "start": 14.6,
+      "end": 17.0
+    },
+    {
+      "text": "ЛЮДИ",
+      "start": 17.0,
+      "end": 19.8
+    },
+    {
+      "text": "0 МУТАНТОВ",
+      "start": 19.8,
+      "end": 23.1
+    }
+  ]
+}

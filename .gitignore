@@ -1,0 +1,46 @@
+# Unreal — генерируемое
+Game/Binaries/
+Game/Intermediate/
+Game/Saved/
+Game/DerivedDataCache/
+Game/Build/Receipts/
+Game/Plugins/**/Binaries/
+Game/Plugins/**/Intermediate/
+tools/third_party/**/Binaries/
+tools/third_party/**/Intermediate/
+
+# Файлы IDE
+.vs/
+.vscode/
+.idea/
+*.sln
+*.suo
+*.sdf
+*.VC.db
+*.opensdf
+*.code-workspace
+
+# Сборки и пакеты
+Packaged/
+Releases/
+*.pdb
+
+# Секреты и локальное
+.env
+.env.*
+!.env.example
+.claude/settings.local.json
+*.log
+
+# Граф знаний graphify — кэш пересобирается
+graphify-out/cache/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# ОС
+Thumbs.db
+Desktop.ini
+.DS_Store
