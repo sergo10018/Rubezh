@@ -7,7 +7,6 @@ MMO-lite онлайн-шутер с выживанием, экономикой �
 - `docs/00_Процесс_и_план_разработки.md` — этапы, роли, gate-критерии, риски.
 - `docs/gdd/` — геймдизайн по системам; `docs/tech/` — архитектура; `docs/levels/`, `docs/narrative/`, `docs/qa/`, `docs/backlog/`.
 - `docs/marketing/` — продвижение разработки (Reels/Shorts): стратегия, сценарии, голос аккаунта. Скиллы `.claude/skills/ig-*`, сборка видео — `tools/reels/`. Публикует только человек.
-- `docs/marketing/` — продвижение разработки (Reels/Shorts): стратегия, сценарии, голос аккаунта. Скиллы `.claude/skills/ig-*`, сборка видео — `tools/reels/`. Публикует только человек.
 - `.agents/ue-project-context.md` — контекст UE-проекта для скиллов (создать скиллом `ue-project-context`, когда появится `.uproject`).
 
 ## Жёсткие правила
