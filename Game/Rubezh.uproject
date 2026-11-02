@@ -292,6 +292,10 @@
 			"Enabled": true
 		},
 		{
+			"Name": "RubezhCore",
+			"Enabled": true
+		},
+		{
 			"Name": "ShooterMaps",
 			"Enabled": true
 		},

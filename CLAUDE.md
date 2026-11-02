@@ -41,6 +41,8 @@ MMO-lite онлайн-шутер с выживанием, экономикой �
 Этап 0 «Подготовка» (см. план).
 - Корень репозитория — `E:\Rubezh` (Git + LFS, ассеты `lockable`); удалённый хостинг ещё не выбран.
 - UE 5.8.4 из лаунчера: `E:\UE_5.8`. Проект — `Game/Rubezh.uproject` на основе Lyra (модули `LyraGame`/`LyraEditor` пока не переименованы; наш код будет в отдельном модуле/плагине с префиксом `Rubezh`).
-- Плагин EngineWire (Unreal MCP) установлен в `Game/Plugins/EngineWire`.
+- Плагин EngineWire (Unreal MCP) установлен в `Game/Plugins/EngineWire`. Операции уровней MCP работают только с `/Game`; для контента плагинов — Python через MCP.
+- Наш код и контент — Game Feature плагин `Game/Plugins/GameFeatures/RubezhCore` (модуль `RubezhCoreRuntime`, лог `LogRubezh`). Тестовая карта — `/RubezhCore/Maps/L_Rubezh_Proto`, режим — `B_Rubezh_Proto`.
+- Геймдизайн: `docs/gdd/00_Core_loop.md` (черновик, ждёт решений лида).
 - Сборка редактора: `E:\UE_5.8\Engine\Build\BatchFiles\Build.bat LyraEditor Win64 Development -Project=E:\Rubezh\Game\Rubezh.uproject -WaitMutex`.
 - Для выделенного сервера понадобится движок, собранный из исходников (Этап 1).

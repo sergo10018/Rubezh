@@ -11,7 +11,10 @@
 **Hardware baseline (lead dev PC):** Ryzen 7 5700X, 32 GB RAM, GeForce GTX 1660 SUPER (no hardware ray tracing → Lumen software path only).
 
 ## Modules
-**Primary game module:** `LyraGame` (Lyra modules not renamed yet). Project code goes into a separate module/plugin with the `Rubezh` prefix — [not yet created].
+**Primary game module:** `LyraGame` (Lyra modules not renamed yet).
+**Project code:** Game Feature plugin `Plugins/GameFeatures/RubezhCore` (mount point `/RubezhCore`), module `RubezhCoreRuntime` (Runtime; public deps Core, LyraGame, ModularGameplay; private deps CoreUObject, Engine, GameplayTags, GameplayTasks, GameplayAbilities, GameplayMessageRuntime, EnhancedInput, NetCore). `BuiltInInitialFeatureState: Registered`, activated by experience `B_Rubezh_Proto`. Asset scan rules copied from ShooterCore (Experiences, Maps, …).
+**Prototype map:** `/RubezhCore/Maps/L_Rubezh_Proto` (200×200 m grey box, 8 `ALyraPlayerStart`, NavMeshBoundsVolume) → experience `/RubezhCore/Experiences/B_Rubezh_Proto` (copy of `B_ShooterGame_Elimination` + `RubezhCore` feature).
+**MCP note:** EngineWire level/save operations accept only `/Game` and `/Engine` paths; for plugin content (`/RubezhCore`) use `system_control.execute_python` (each call needs a fresh consent from `describe`).
 
 | Module | Host type | Key deps | Notes |
 |---|---|---|---|
@@ -43,7 +46,7 @@
 **Prefixes:** Epic standard F/U/A/E/I; project classes `Rubezh` (e.g. `URubezhInventoryComponent`). Lyra code keeps `Lyra`.
 **Object references:** `TObjectPtr` in `UPROPERTY`.
 **API macro style:** Lyra uses per-header `#define UE_API LYRAGAME_API`; Rubezh module style [not yet established].
-**Log categories:** Lyra: `LogLyra`, `LogLyraAbilitySystem`, `LogLyraExperience`, `LogLyraTeams`, `LogLyraRepGraph`… Rubezh: `LogRubezh` + per-system — [not yet created].
+**Log categories:** Lyra: `LogLyra`, `LogLyraAbilitySystem`, `LogLyraExperience`, `LogLyraTeams`, `LogLyraRepGraph`… Rubezh: `LogRubezh` (declared in `RubezhCoreRuntimeModule.h`, exported `RUBEZHCORERUNTIME_API`); per-system categories later.
 **Assertions:** [unknown]
 **Enforced rules (CLAUDE.md):** C++ for logic, Blueprint for configuration only; server-authoritative damage/loot/inventory/craft/money; never edit `.uasset`/`.umap` as files (editor, Python API or MCP only); game data in `data/` as CSV/JSON → DataTable; secrets in env vars; C++ reviewed by `ecc:cpp-reviewer`.
 
