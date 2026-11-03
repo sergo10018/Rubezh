@@ -14,6 +14,8 @@ public class RubezhCoreRuntime : ModuleRules
 				"Core",
 				"LyraGame",
 				"ModularGameplay",
+				"GameplayAbilities",
+				"GameplayMessageRuntime",
 			}
 		);
 
@@ -24,8 +26,6 @@ public class RubezhCoreRuntime : ModuleRules
 				"Engine",
 				"GameplayTags",
 				"GameplayTasks",
-				"GameplayAbilities",
-				"GameplayMessageRuntime",
 				"EnhancedInput",
 				"NetCore",
 			}
