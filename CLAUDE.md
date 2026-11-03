@@ -39,10 +39,24 @@ MMO-lite онлайн-шутер с выживанием, экономикой �
 
 ## Текущий этап
 Этап 0 «Подготовка» (см. план).
-- Корень репозитория — `E:\Rubezh` (Git + LFS, ассеты `lockable`); удалённый хостинг ещё не выбран.
+- Корень репозитория — `E:\Rubezh` (Git + LFS, ассеты `lockable`). Удалённый репозиторий — приватный GitHub `https://github.com/sergo10018/Rubezh`, ветка `main`.
 - UE 5.8.4 из лаунчера: `E:\UE_5.8`. Проект — `Game/Rubezh.uproject` на основе Lyra (модули `LyraGame`/`LyraEditor` пока не переименованы; наш код будет в отдельном модуле/плагине с префиксом `Rubezh`).
 - Плагин EngineWire (Unreal MCP) установлен в `Game/Plugins/EngineWire`. Операции уровней MCP работают только с `/Game`; для контента плагинов — Python через MCP.
 - Наш код и контент — Game Feature плагин `Game/Plugins/GameFeatures/RubezhCore` (модуль `RubezhCoreRuntime`, лог `LogRubezh`). Тестовая карта — `/RubezhCore/Maps/L_Rubezh_Proto`, режим — `B_Rubezh_Proto`.
-- Геймдизайн: `docs/gdd/00_Core_loop.md` (черновик, ждёт решений лида).
-- Сборка редактора: `E:\UE_5.8\Engine\Build\BatchFiles\Build.bat LyraEditor Win64 Development -Project=E:\Rubezh\Game\Rubezh.uproject -WaitMutex`.
+- Геймдизайн: `docs/gdd/00_Core_loop.md` и `docs/gdd/01_Системы_прототипа.md` — решения лида внесены (смерть, выход из боя 15 с, КПП, сетка-инвентарь, камера, голос).
+- Сборка редактора: `E:\UE_5.8\Engine\Build\BatchFiles\Build.bat LyraEditor Win64 Development -Project=E:\Rubezh\Game\Rubezh.uproject -WaitMutex`. При открытом редакторе с Live Coding сборка не идёт — редактор надо закрыть.
+- Автотесты: `UnrealEditor-Cmd.exe <uproject> -ExecCmds="Automation RunTests Rubezh; Quit" -unattended -nullrhi -nosplash -nosound -stdout`.
 - Для выделенного сервера понадобится движок, собранный из исходников (Этап 1).
+
+## Что уже сделано в коде (RubezhCore)
+- `URubezhSurvivalSet` — выносливость и вес (GAS), выдаётся игроку через `AbilitySet_RubezhSurvival` → `HeroData_Rubezh` (свои данные персонажа, копия `HeroData_ShooterGame`) → режим `B_Rubezh_Proto`.
+- `Rubezh::Encumbrance` — уровни перегруза; `ERubezhItemCategory` + `Rubezh::Items::IsLostOnDeath`; `URubezhCombatLogoutSubsystem` — запрет выхода 15 с после урона (только сервер).
+- Ещё не связано с игрой: вес не замедляет движение, бег не тратит выносливость, выхода из игры нет.
+
+## Командная работа (2+ человека, у каждого свой Claude)
+- Перед работой — `git pull`; после каждого законченного куска — коммит и `git push` маленькими порциями.
+- `.uasset`/`.umap` не сливаются: заранее договариваться, кто правит какой ассет. Пока сервер блокировок не используется, локально стоит `git config lfs.setlockablereadonly false` (иначе ассеты после коммита становятся read-only и редактор не может сохранить). Каждому участнику выполнить эту команду у себя.
+- Пути `E:\Rubezh` и `E:\UE_5.8` прописаны здесь и в `.mcp.json`; при других путях поправить у себя.
+- Скомпилированные бинарники не хранятся в git: после `git pull` с изменениями C++ — собрать редактор.
+- Владелец проекта (лид-геймдизайнер) — новичок в UE: объяснять каждое действие простыми словами.
+- Запуск игры без редактора — только из PowerShell/cmd: Git Bash портит путь карты `/RubezhCore/...`.
