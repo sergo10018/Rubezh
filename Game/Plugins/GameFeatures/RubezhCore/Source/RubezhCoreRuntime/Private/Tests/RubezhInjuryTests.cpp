@@ -31,8 +31,8 @@ namespace
 		FRubezhItemDefinition Tourniquet = MakeMedical(4.0f, 0.0f, ERubezhInjury::HeavyBleeding);
 		FRubezhItemDefinition Splint = MakeMedical(6.0f, 0.0f, ERubezhInjury::LegFracture);
 		FRubezhItemDefinition Painkillers = MakeMedical(2.0f, 0.0f, ERubezhInjury::None, 120.0f);
-		FRubezhItemDefinition MedkitSmall = MakeMedical(4.0f, 35.0f, ERubezhInjury::None, 0.0f, 20.0f);	// всего 55 %
-		FRubezhItemDefinition MedkitArmy = MakeMedical(7.0f, 50.0f, ERubezhInjury::None, 0.0f, 30.0f);	// всего 80 %
+		FRubezhItemDefinition MedkitSmall = MakeMedical(4.0f, 15.0f, ERubezhInjury::None, 0.0f, 10.0f);	// всего 25 %
+		FRubezhItemDefinition MedkitArmy = MakeMedical(7.0f, 40.0f, ERubezhInjury::None, 0.0f, 20.0f);	// всего 60 %
 		FRubezhItemDefinition Scrap;	// не медицина
 
 		TArray<TPair<FName, const FRubezhItemDefinition*>> All() const
@@ -125,9 +125,10 @@ bool FRubezhTreatmentTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("Потом бинт"), ChooseQuickTreatment(All, Bleeding | Bit(ERubezhInjury::LegFracture), false, 50.0f, 100.0f), FName(TEXT("bandage")));
 	TestEqual(TEXT("Потом шина"), ChooseQuickTreatment(All, Bit(ERubezhInjury::LegFracture) | Bit(ERubezhInjury::Pain), false, 50.0f, 100.0f), FName(TEXT("splint")));
 	TestEqual(TEXT("Потом обезболивающее"), ChooseQuickTreatment(All, Bit(ERubezhInjury::Pain), false, 50.0f, 100.0f), FName(TEXT("painkillers")));
-	TestEqual(TEXT("Не хватает 50 — малой аптечки (55 %) достаточно"), ChooseQuickTreatment(All, 0, false, 50.0f, 100.0f), FName(TEXT("medkit_small")));
-	TestEqual(TEXT("Не хватает 70 — армейская"), ChooseQuickTreatment(All, 0, false, 30.0f, 100.0f), FName(TEXT("medkit_army")));
-	TestEqual(TEXT("Проценты считаются от максимума: при максимуме 200 малой (110) не хватит на 120"),
+	TestEqual(TEXT("Не хватает 20 — малой аптечки (25 %) достаточно"), ChooseQuickTreatment(All, 0, false, 80.0f, 100.0f), FName(TEXT("medkit_small")));
+	TestEqual(TEXT("Не хватает 50 — нужна армейская (60 %)"), ChooseQuickTreatment(All, 0, false, 50.0f, 100.0f), FName(TEXT("medkit_army")));
+	TestEqual(TEXT("Не хватает 70 — ни одной не хватит, берём самую большую"), ChooseQuickTreatment(All, 0, false, 30.0f, 100.0f), FName(TEXT("medkit_army")));
+	TestEqual(TEXT("Проценты считаются от максимума: при максимуме 200 малой (50) не хватит на 120, армейской (120) хватит"),
 		ChooseQuickTreatment(All, 0, false, 80.0f, 200.0f), FName(TEXT("medkit_army")));
 	TestEqual(TEXT("35 % от 100 — 35 здоровья"), PercentToHealth(35.0f, 100.0f), 35.0f);
 	TestEqual(TEXT("20 % от 150 — 30 здоровья"), PercentToHealth(20.0f, 150.0f), 30.0f);

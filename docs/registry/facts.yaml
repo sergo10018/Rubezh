@@ -135,23 +135,25 @@ rules:
 items:
   - name: Аптечка малая
     id: medkit_small
-    value: "4 с; 35 % сразу и 20 % через 5 с"
+    value: "4 с; 15 % сразу и 10 % через 5 с"
     status: active
     source: data/items.csv
     referenced_by:
       - docs/gdd/01_Системы_прототипа.md#3
-    conflict: "GDD: +25 HP за 4 с. Таблица и CLAUDE.md используют проценты с отложенным лечением (коммит ab23e702)."
+    note: "Было 35 % + 20 %. Механика сохранена, сумма возвращена к замыслу GDD (25 HP при здоровье 100). Решение лида."
     added: 2026-11-05
+    revised: 2026-11-05
 
   - name: Аптечка армейская
     id: medkit_army
-    value: "7 с; 50 % сразу и 30 % через 5 с"
+    value: "7 с; 40 % сразу и 20 % через 5 с"
     status: active
     source: data/items.csv
     referenced_by:
       - docs/gdd/01_Системы_прототипа.md#3
-    conflict: "GDD: +60 HP за 7 с. Таблица и CLAUDE.md используют проценты с отложенным лечением (коммит ab23e702)."
+    note: "Было 50 % + 30 %. Механика сохранена, сумма возвращена к замыслу GDD (60 HP при здоровье 100). Решение лида."
     added: 2026-11-05
+    revised: 2026-11-05
 
   - name: Бинт
     id: bandage
