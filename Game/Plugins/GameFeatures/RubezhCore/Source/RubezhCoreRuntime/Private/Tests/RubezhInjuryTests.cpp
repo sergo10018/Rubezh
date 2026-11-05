@@ -11,12 +11,14 @@ namespace
 	constexpr EAutomationTestFlags InjuryTestFlags = EAutomationTestFlags::EditorContext | EAutomationTestFlags::ServerContext | EAutomationTestFlags::EngineFilter;
 	constexpr int32 RollCount = 20000;
 
-	FRubezhItemDefinition MakeMedical(float UseSeconds, float Heal, ERubezhInjury Cures, float PainRelief = 0.0f)
+	FRubezhItemDefinition MakeMedical(float UseSeconds, float HealPercent, ERubezhInjury Cures, float PainRelief = 0.0f, float DelayedPercent = 0.0f)
 	{
 		FRubezhItemDefinition Item;
 		Item.Category = ERubezhItemCategory::Consumable;
 		Item.UseSeconds = UseSeconds;
-		Item.HealAmount = Heal;
+		Item.HealPercent = HealPercent;
+		Item.DelayedHealPercent = DelayedPercent;
+		Item.DelayedHealSeconds = DelayedPercent > 0.0f ? 5.0f : 0.0f;
 		Item.Cures = Cures;
 		Item.PainReliefSeconds = PainRelief;
 		return Item;
@@ -29,8 +31,8 @@ namespace
 		FRubezhItemDefinition Tourniquet = MakeMedical(4.0f, 0.0f, ERubezhInjury::HeavyBleeding);
 		FRubezhItemDefinition Splint = MakeMedical(6.0f, 0.0f, ERubezhInjury::LegFracture);
 		FRubezhItemDefinition Painkillers = MakeMedical(2.0f, 0.0f, ERubezhInjury::None, 120.0f);
-		FRubezhItemDefinition MedkitSmall = MakeMedical(4.0f, 25.0f, ERubezhInjury::None);
-		FRubezhItemDefinition MedkitArmy = MakeMedical(7.0f, 60.0f, ERubezhInjury::None);
+		FRubezhItemDefinition MedkitSmall = MakeMedical(4.0f, 35.0f, ERubezhInjury::None, 0.0f, 20.0f);	// всего 55 %
+		FRubezhItemDefinition MedkitArmy = MakeMedical(7.0f, 50.0f, ERubezhInjury::None, 0.0f, 30.0f);	// всего 80 %
 		FRubezhItemDefinition Scrap;	// не медицина
 
 		TArray<TPair<FName, const FRubezhItemDefinition*>> All() const
@@ -123,8 +125,13 @@ bool FRubezhTreatmentTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("Потом бинт"), ChooseQuickTreatment(All, Bleeding | Bit(ERubezhInjury::LegFracture), false, 50.0f, 100.0f), FName(TEXT("bandage")));
 	TestEqual(TEXT("Потом шина"), ChooseQuickTreatment(All, Bit(ERubezhInjury::LegFracture) | Bit(ERubezhInjury::Pain), false, 50.0f, 100.0f), FName(TEXT("splint")));
 	TestEqual(TEXT("Потом обезболивающее"), ChooseQuickTreatment(All, Bit(ERubezhInjury::Pain), false, 50.0f, 100.0f), FName(TEXT("painkillers")));
-	TestEqual(TEXT("Не хватает 20 — малой аптечки достаточно"), ChooseQuickTreatment(All, 0, false, 80.0f, 100.0f), FName(TEXT("medkit_small")));
-	TestEqual(TEXT("Не хватает 50 — армейская"), ChooseQuickTreatment(All, 0, false, 50.0f, 100.0f), FName(TEXT("medkit_army")));
+	TestEqual(TEXT("Не хватает 50 — малой аптечки (55 %) достаточно"), ChooseQuickTreatment(All, 0, false, 50.0f, 100.0f), FName(TEXT("medkit_small")));
+	TestEqual(TEXT("Не хватает 70 — армейская"), ChooseQuickTreatment(All, 0, false, 30.0f, 100.0f), FName(TEXT("medkit_army")));
+	TestEqual(TEXT("Проценты считаются от максимума: при максимуме 200 малой (110) не хватит на 120"),
+		ChooseQuickTreatment(All, 0, false, 80.0f, 200.0f), FName(TEXT("medkit_army")));
+	TestEqual(TEXT("35 % от 100 — 35 здоровья"), PercentToHealth(35.0f, 100.0f), 35.0f);
+	TestEqual(TEXT("20 % от 150 — 30 здоровья"), PercentToHealth(20.0f, 150.0f), 30.0f);
+	TestTrue(TEXT("Предмет только с отложенным лечением — тоже медицина"), IsMedical(MakeMedical(3.0f, 0.0f, ERubezhInjury::None, 0.0f, 10.0f)));
 	TestEqual(TEXT("Здоров — лечить нечего"), ChooseQuickTreatment(All, 0, false, 100.0f, 100.0f), FName(NAME_None));
 
 	const TArray<TPair<FName, const FRubezhItemDefinition*>> OnlySmall = { { TEXT("medkit_small"), &Items.MedkitSmall } };

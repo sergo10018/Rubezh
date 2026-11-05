@@ -184,12 +184,14 @@ void URubezhInjuryComponent::TickServer(float DeltaTime)
 			State.TreatmentItem = NAME_None;
 			ApplyTreatmentBlock(false);
 		}
+		State.PendingHeals.Reset();
 		return;
 	}
 
 	TrackFall();
 	ApplyBleeding(DeltaTime);
 	UpdatePain();
+	ApplyPendingHeals();
 
 	if (IsTreating() && GetServerTime() >= State.TreatmentEnd)
 	{
@@ -363,11 +365,45 @@ void URubezhInjuryComponent::FinishTreatment()
 	{
 		State.PainReliefUntil = GetServerTime() + Item->PainReliefSeconds;
 	}
-	if (Item->HealAmount > 0.0f)
+	HealPercent(Item->HealPercent);
+	if (Item->DelayedHealPercent > 0.0f)
 	{
-		ApplyHealthEffect(URubezhGE_Heal::StaticClass(), RubezhGameplayTags::SetByCaller_Healing, Item->HealAmount);
+		// Аптечка «действует» ещё какое-то время — вторая часть здоровья придёт позже (урон её не отменяет, смерть — отменяет).
+		State.PendingHeals.Add(FRubezhPendingHeal{ GetServerTime() + Item->DelayedHealSeconds, Item->DelayedHealPercent });
 	}
 	SyncInjuryTags();
+}
+
+void URubezhInjuryComponent::ApplyPendingHeals()
+{
+	const double Now = GetServerTime();
+	for (int32 Index = State.PendingHeals.Num() - 1; Index >= 0; --Index)
+	{
+		if (Now >= State.PendingHeals[Index].At)
+		{
+			HealPercent(State.PendingHeals[Index].Percent);
+			State.PendingHeals.RemoveAt(Index);
+		}
+	}
+}
+
+void URubezhInjuryComponent::HealPercent(float Percent) const
+{
+	const ULyraHealthComponent* Health = ULyraHealthComponent::FindHealthComponent(GetPawn<APawn>());
+	if (Health && Percent > 0.0f)
+	{
+		ApplyHealthEffect(URubezhGE_Heal::StaticClass(), RubezhGameplayTags::SetByCaller_Healing, PercentToHealth(Percent, Health->GetMaxHealth()));
+	}
+}
+
+float URubezhInjuryComponent::GetPendingHealSecondsLeft() const
+{
+	double Earliest = TNumericLimits<double>::Max();
+	for (const FRubezhPendingHeal& Heal : State.PendingHeals)
+	{
+		Earliest = FMath::Min(Earliest, Heal.At);
+	}
+	return State.PendingHeals.IsEmpty() ? 0.0f : FMath::Max(0.0f, static_cast<float>(Earliest - GetServerTime()));
 }
 
 void URubezhInjuryComponent::ApplyHealthEffect(TSubclassOf<UGameplayEffect> EffectClass, const FGameplayTag& MagnitudeTag, float Amount) const
@@ -539,7 +575,8 @@ void URubezhInjuryComponent::ApplyPainSway(float DeltaTime)
 
 void URubezhInjuryComponent::UpdateStatusWidget()
 {
-	const bool bHasSomething = State.Injuries != 0 || IsTreating();
+	const float PendingHealSeconds = GetPendingHealSecondsLeft();
+	const bool bHasSomething = State.Injuries != 0 || IsTreating() || PendingHealSeconds > 0.0f;
 	if (!bHasSomething)
 	{
 		if (StatusWidget)
@@ -567,6 +604,6 @@ void URubezhInjuryComponent::UpdateStatusWidget()
 		const FRubezhItemDefinition* Item = Inventory ? Inventory->FindDefinition(State.TreatmentItem) : nullptr;
 		TreatmentName = Item ? Item->DisplayName : FText::FromName(State.TreatmentItem);
 	}
-	StatusWidget->SetStatus(State.Injuries, IsPainRelieved(), TreatmentName, GetTreatmentProgress());
+	StatusWidget->SetStatus(State.Injuries, IsPainRelieved(), TreatmentName, GetTreatmentProgress(), PendingHealSeconds);
 	StatusWidget->SetVisibility(ESlateVisibility::HitTestInvisible);
 }

@@ -71,6 +71,7 @@ void URubezhHealthStatusWidget::NativeOnInitialized()
 	BarBox->AddChild(TreatmentBar);
 	Treatment->AddChildToVerticalBox(BarBox)->SetHorizontalAlignment(HAlign_Center);
 
+	PendingHealText = AddCenteredText(*WidgetTree, *Column, PromptActionFontSize, GetEncumbranceColor(ERubezhEncumbranceLevel::Normal));
 	HintLine = AddCenteredText(*WidgetTree, *Column, PromptActionFontSize, Rubezh::InventoryStyle::HintText);
 
 	SetAnchorsInViewport(FAnchors(0.5f, HealthStatusScreenHeight));
@@ -78,7 +79,7 @@ void URubezhHealthStatusWidget::NativeOnInitialized()
 	SetVisibility(ESlateVisibility::HitTestInvisible);
 }
 
-void URubezhHealthStatusWidget::SetStatus(uint8 Injuries, bool bPainRelieved, const FText& TreatmentName, float TreatmentProgress)
+void URubezhHealthStatusWidget::SetStatus(uint8 Injuries, bool bPainRelieved, const FText& TreatmentName, float TreatmentProgress, float PendingHealSeconds)
 {
 	const FString InjuryLine = DescribeInjuries(Injuries, bPainRelieved);
 	InjuryText->SetText(FText::FromString(InjuryLine));
@@ -92,7 +93,13 @@ void URubezhHealthStatusWidget::SetStatus(uint8 Injuries, bool bPainRelieved, co
 		TreatmentBar->SetPercent(TreatmentProgress);
 	}
 
+	PendingHealText->SetVisibility(PendingHealSeconds > 0.0f ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
+	if (PendingHealSeconds > 0.0f)
+	{
+		PendingHealText->SetText(FText::FromString(FString::Printf(TEXT("Аптечка действует: %d с"), FMath::CeilToInt(PendingHealSeconds))));
+	}
+
 	const FString Key = GetDefault<URubezhSettings>()->HealKey.GetDisplayName().ToString();
 	HintLine->SetText(FText::FromString(FString::Printf(TEXT("%s — лечиться"), *Key)));
-	HintLine->SetVisibility(bTreating ? ESlateVisibility::Collapsed : ESlateVisibility::HitTestInvisible);
+	HintLine->SetVisibility((bTreating || Injuries == 0) ? ESlateVisibility::Collapsed : ESlateVisibility::HitTestInvisible);
 }

@@ -44,9 +44,19 @@ struct RUBEZHCORERUNTIME_API FRubezhItemDefinition : public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rubezh|Item|Medical", Meta = (ClampMin = 0))
 	float UseSeconds = 0.0f;
 
-	// Сколько здоровья восстанавливает.
+	// Сколько процентов максимального здоровья восстанавливает сразу по окончании применения.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rubezh|Item|Medical", Meta = (ClampMin = 0, ClampMax = 100))
+	float HealPercent = 0.0f;
+
+	// Сколько процентов добавляется ещё, когда пройдёт DelayedHealSeconds после применения (действие аптечки).
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rubezh|Item|Medical", Meta = (ClampMin = 0, ClampMax = 100))
+	float DelayedHealPercent = 0.0f;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rubezh|Item|Medical", Meta = (ClampMin = 0))
-	float HealAmount = 0.0f;
+	float DelayedHealSeconds = 0.0f;
+
+	/** Всё здоровье, которое даст предмет (сразу и потом), в процентах от максимума. */
+	float GetTotalHealPercent() const { return HealPercent + DelayedHealPercent; }
 
 	// Какую травму лечит.
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rubezh|Item|Medical")

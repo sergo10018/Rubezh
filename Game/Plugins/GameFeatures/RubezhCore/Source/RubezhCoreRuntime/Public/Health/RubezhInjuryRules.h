@@ -1,6 +1,6 @@
 // РУБЕЖ: Земля после разлома
 // Правила травм и лечения (docs/gdd/01_Системы_прототипа.md §3). Только математика — проверяется тестами.
-// Что лечит каждый предмет и сколько это длится — в data/items.csv (UseSeconds, HealAmount, Cures, PainReliefSeconds).
+// Что лечит каждый предмет и сколько это длится — в data/items.csv (UseSeconds, HealPercent, DelayedHealPercent, DelayedHealSeconds, Cures, PainReliefSeconds).
 
 #pragma once
 
@@ -52,6 +52,9 @@ namespace Rubezh::Injuries
 
 	/** Сколько здоровья в секунду отнимают кровотечения. */
 	RUBEZHCORERUNTIME_API float GetHealthLossPerSecond(FMask Injuries);
+
+	/** Перевести проценты лечения в единицы здоровья. */
+	RUBEZHCORERUNTIME_API float PercentToHealth(float Percent, float MaxHealth);
 
 	/** Есть ли смысл применять предмет: лечит имеющуюся травму, восстанавливает недостающее здоровье или снимает боль. */
 	RUBEZHCORERUNTIME_API bool IsUseful(const FRubezhItemDefinition& Item, FMask Injuries, bool bPainRelieved, float Health, float MaxHealth);

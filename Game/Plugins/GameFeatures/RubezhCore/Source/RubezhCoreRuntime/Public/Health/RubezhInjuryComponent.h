@@ -13,6 +13,19 @@ class URubezhHealthStatusWidget;
 struct FGameplayEffectSpec;
 struct FRubezhItemDefinition;
 
+/** Отложенная часть лечения аптечкой: добавится в указанное время. */
+USTRUCT()
+struct FRubezhPendingHeal
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	double At = 0.0;
+
+	UPROPERTY()
+	float Percent = 0.0f;
+};
+
 /** Травмы и текущее лечение. Время — серверное (GameState::GetServerWorldTimeSeconds), чтобы клиент мог показать прогресс. */
 USTRUCT()
 struct FRubezhInjuryState
@@ -39,6 +52,10 @@ struct FRubezhInjuryState
 
 	UPROPERTY()
 	double TreatmentEnd = 0.0;
+
+	// Аптечки, которые ещё действуют (вторая часть здоровья придёт позже).
+	UPROPERTY()
+	TArray<FRubezhPendingHeal> PendingHeals;
 };
 
 /**
@@ -71,6 +88,9 @@ public:
 	bool IsPainRelieved() const;
 	float GetTreatmentProgress() const;
 
+	/** Сколько секунд осталось до ближайшей отложенной части лечения (0 — ничего не ждём). */
+	float GetPendingHealSecondsLeft() const;
+
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
@@ -92,6 +112,8 @@ private:
 	void TrackFall();
 	void ApplyBleeding(float DeltaTime);
 	void UpdatePain();
+	void ApplyPendingHeals();
+	void HealPercent(float Percent) const;
 	void FinishTreatment();
 	void ApplyHealthEffect(TSubclassOf<class UGameplayEffect> EffectClass, const FGameplayTag& MagnitudeTag, float Amount) const;
 	void SyncInjuryTags() const;

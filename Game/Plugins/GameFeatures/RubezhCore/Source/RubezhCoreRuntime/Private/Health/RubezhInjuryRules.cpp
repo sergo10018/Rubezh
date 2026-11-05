@@ -35,7 +35,7 @@ namespace Rubezh::Injuries
 		}
 
 		/** Самая маленькая аптечка, которой хватает до полного здоровья; если не хватает ни одной — самая большая. */
-		FName FindHealing(const FCandidates& Available, float Missing)
+		FName FindHealing(const FCandidates& Available, float Missing, float MaxHealth)
 		{
 			FName Enough = NAME_None;
 			float EnoughAmount = TNumericLimits<float>::Max();
@@ -45,19 +45,20 @@ namespace Rubezh::Injuries
 			for (const TPair<FName, const FRubezhItemDefinition*>& Candidate : Available)
 			{
 				const FRubezhItemDefinition* Item = Candidate.Value;
-				if (!Item || Item->UseSeconds <= 0.0f || Item->HealAmount <= 0.0f)
+				const float Amount = Item ? PercentToHealth(Item->GetTotalHealPercent(), MaxHealth) : 0.0f;
+				if (!Item || Item->UseSeconds <= 0.0f || Amount <= 0.0f)
 				{
 					continue;
 				}
-				if (Item->HealAmount >= Missing && Item->HealAmount < EnoughAmount)
+				if (Amount >= Missing && Amount < EnoughAmount)
 				{
 					Enough = Candidate.Key;
-					EnoughAmount = Item->HealAmount;
+					EnoughAmount = Amount;
 				}
-				if (Item->HealAmount > LargestAmount)
+				if (Amount > LargestAmount)
 				{
 					Largest = Candidate.Key;
-					LargestAmount = Item->HealAmount;
+					LargestAmount = Amount;
 				}
 			}
 			return Enough != NAME_None ? Enough : Largest;
@@ -116,9 +117,14 @@ namespace Rubezh::Injuries
 		return Loss;
 	}
 
+	float PercentToHealth(float Percent, float MaxHealth)
+	{
+		return FMath::Max(0.0f, Percent) * 0.01f * FMath::Max(0.0f, MaxHealth);
+	}
+
 	bool IsMedical(const FRubezhItemDefinition& Item)
 	{
-		return Item.UseSeconds > 0.0f && (Item.HealAmount > 0.0f || Item.Cures != ERubezhInjury::None || Item.PainReliefSeconds > 0.0f);
+		return Item.UseSeconds > 0.0f && (Item.GetTotalHealPercent() > 0.0f || Item.Cures != ERubezhInjury::None || Item.PainReliefSeconds > 0.0f);
 	}
 
 	bool IsUseful(const FRubezhItemDefinition& Item, FMask Injuries, bool bPainRelieved, float Health, float MaxHealth)
@@ -129,7 +135,7 @@ namespace Rubezh::Injuries
 		}
 
 		const bool bCuresSomething = Item.Cures != ERubezhInjury::None && Has(Injuries, Item.Cures);
-		const bool bHealsSomething = Item.HealAmount > 0.0f && Health < MaxHealth;
+		const bool bHealsSomething = Item.GetTotalHealPercent() > 0.0f && Health < MaxHealth;
 		const bool bRelievesPain = Item.PainReliefSeconds > 0.0f && Has(Injuries, ERubezhInjury::Pain) && !bPainRelieved;
 		return bCuresSomething || bHealsSomething || bRelievesPain;
 	}
@@ -156,6 +162,6 @@ namespace Rubezh::Injuries
 			}
 		}
 
-		return Health < MaxHealth ? FindHealing(Available, MaxHealth - Health) : NAME_None;
+		return Health < MaxHealth ? FindHealing(Available, MaxHealth - Health, MaxHealth) : NAME_None;
 	}
 }

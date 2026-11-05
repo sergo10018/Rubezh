@@ -19,7 +19,8 @@ class RUBEZHCORERUNTIME_API URubezhHealthStatusWidget : public UUserWidget
 	GENERATED_BODY()
 
 public:
-	void SetStatus(uint8 Injuries, bool bPainRelieved, const FText& TreatmentName, float TreatmentProgress);
+	/** PendingHealSeconds — сколько ещё действует аптечка (0 — не действует). */
+	void SetStatus(uint8 Injuries, bool bPainRelieved, const FText& TreatmentName, float TreatmentProgress, float PendingHealSeconds);
 
 protected:
 	virtual void NativeOnInitialized() override;
@@ -36,6 +37,9 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<UProgressBar> TreatmentBar;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UTextBlock> PendingHealText;
 
 	UPROPERTY(Transient)
 	TObjectPtr<UTextBlock> HintLine;
