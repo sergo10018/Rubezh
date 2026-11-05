@@ -1,0 +1,191 @@
+# Реестр фактов «Рубежа»
+#
+# Зачем: одно число или название часто встречается в нескольких документах и в коде.
+# Реестр помнит, кто из них главный, и позволяет скиллу consistency-check найти расхождения.
+#
+# Правила:
+# - Заносим только то, что встречается минимум в двух местах. Внутренние числа одной системы не нужны.
+# - source — главный источник. При расхождении значением считается он, пока лид не решит иначе.
+# - Канон (docs/01_Канон.md) главнее всех. data/*.csv главнее GDD по значениям предметов и лута.
+# - referenced_by — где ещё факт встречается; это список того, что проверить при его изменении.
+# - Записи не удаляем: ставим status: deprecated. При смене значения пишем revised и старое значение в note.
+# - status: active | deprecated. Нерешённое расхождение описываем в conflict.
+# - Реестр не решает за лида: геймдизайнерские правки делаются с его одобрения,
+#   канон — только с записью в журнал изменений канона.
+
+version: 1
+last_updated: 2026-11-05
+
+# ─── ФРАКЦИИ ───────────────────────────────────────────────
+factions:
+  - name: Военный протекторат
+    status: active
+    source: docs/01_Канон.md#4
+    added: 2026-11-05
+  - name: Вольные поселения
+    status: active
+    source: docs/01_Канон.md#4
+    added: 2026-11-05
+  - name: Синдикат
+    status: active
+    source: docs/01_Канон.md#4
+    added: 2026-11-05
+  - name: Независимые экспедиции
+    status: active
+    source: docs/01_Канон.md#4
+    added: 2026-11-05
+
+# ─── ПРАВИЛА И ЧИСЛА ───────────────────────────────────────
+rules:
+  - name: Лимит веса, база
+    value: 30
+    unit: кг
+    status: active
+    source: docs/gdd/01_Системы_прототипа.md#2
+    referenced_by:
+      - Game/Plugins/GameFeatures/RubezhCore/Source/RubezhCoreRuntime/Public/Survival/RubezhEncumbrance.h
+      - CLAUDE.md
+    added: 2026-11-05
+
+  - name: Пороги перегруза
+    value: "60 % / 100 % / 130 % от лимита"
+    status: active
+    source: docs/gdd/01_Системы_прототипа.md#2
+    referenced_by:
+      - Game/Plugins/GameFeatures/RubezhCore/Source/RubezhCoreRuntime/Public/Survival/RubezhEncumbrance.h
+    added: 2026-11-05
+
+  - name: Запрет выхода после урона
+    value: 15
+    unit: с
+    status: active
+    source: docs/gdd/00_Core_loop.md#7
+    referenced_by:
+      - Game/Plugins/GameFeatures/RubezhCore/Source/RubezhCoreRuntime/Public/Combat/RubezhCombatLogoutSubsystem.h
+      - CLAUDE.md
+    added: 2026-11-05
+
+  - name: Время жизни тела с добычей
+    value: 15
+    unit: мин
+    status: active
+    source: docs/gdd/00_Core_loop.md#4
+    referenced_by:
+      - Game/Plugins/GameFeatures/RubezhCore/Source/RubezhCoreRuntime/Public/RubezhSettings.h
+      - CLAUDE.md
+    added: 2026-11-05
+
+  - name: Что теряется при смерти
+    value: "расходники, хлам, ресурсы и ценности; экипировка и снаряжение в рюкзаке остаются"
+    status: active
+    source: docs/gdd/00_Core_loop.md#4
+    referenced_by:
+      - docs/01_Канон.md#13
+      - docs/gdd/01_Системы_прототипа.md#5
+      - CLAUDE.md
+    added: 2026-11-05
+
+  - name: Здоровье персонажа
+    value: 100
+    unit: ед.
+    status: active
+    source: docs/gdd/01_Системы_прототипа.md#3
+    added: 2026-11-05
+
+  - name: Шанс кровотечения
+    value: 30
+    unit: "%"
+    status: active
+    source: docs/gdd/01_Системы_прототипа.md#3
+    referenced_by:
+      - Game/Plugins/GameFeatures/RubezhCore/Source/RubezhCoreRuntime/Public/Health/RubezhInjuryRules.h
+    added: 2026-11-05
+
+  - name: Условие сильного кровотечения
+    value: "крупный калибр или дробь, шанс 10 %"
+    status: active
+    source: docs/gdd/01_Системы_прототипа.md#3
+    referenced_by:
+      - Game/Plugins/GameFeatures/RubezhCore/Source/RubezhCoreRuntime/Public/Health/RubezhInjuryRules.h
+      - CLAUDE.md
+    conflict: "В коде условие — попадание от 25 урона. Дробина по GDD наносит 9, поэтому, если урон считается по дробине, дробь это условие не выполнит."
+    added: 2026-11-05
+
+  - name: Высота падения для перелома
+    value: 4
+    unit: м
+    status: active
+    source: docs/gdd/01_Системы_прототипа.md#3
+    referenced_by:
+      - Game/Plugins/GameFeatures/RubezhCore/Source/RubezhCoreRuntime/Public/Health/RubezhInjuryRules.h
+      - CLAUDE.md
+    added: 2026-11-05
+
+  - name: Слоты снаряжения
+    value: "голова, бронежилет, одежда верх, одежда низ, рюкзак"
+    status: active
+    source: Game/Plugins/GameFeatures/RubezhCore/Source/RubezhCoreRuntime/Public/Items/RubezhEquipment.h
+    referenced_by:
+      - CLAUDE.md
+      - docs/gdd/01_Системы_прототипа.md#2
+    conflict: "В GDD также есть основное оружие ×2, пистолет и разгрузка. Нужно решить: это ещё не сделанная часть или устаревший список."
+    added: 2026-11-05
+
+# ─── ПРЕДМЕТЫ ──────────────────────────────────────────────
+items:
+  - name: Аптечка малая
+    id: medkit_small
+    value: "4 с; 35 % сразу и 20 % через 5 с"
+    status: active
+    source: data/items.csv
+    referenced_by:
+      - docs/gdd/01_Системы_прототипа.md#3
+    conflict: "GDD: +25 HP за 4 с. Таблица и CLAUDE.md используют проценты с отложенным лечением (коммит ab23e702)."
+    added: 2026-11-05
+
+  - name: Аптечка армейская
+    id: medkit_army
+    value: "7 с; 50 % сразу и 30 % через 5 с"
+    status: active
+    source: data/items.csv
+    referenced_by:
+      - docs/gdd/01_Системы_прототипа.md#3
+    conflict: "GDD: +60 HP за 7 с. Таблица и CLAUDE.md используют проценты с отложенным лечением (коммит ab23e702)."
+    added: 2026-11-05
+
+  - name: Бинт
+    id: bandage
+    value: "3 с; лечит кровотечение"
+    status: active
+    source: data/items.csv
+    referenced_by:
+      - docs/gdd/01_Системы_прототипа.md#3
+    added: 2026-11-05
+
+  - name: Жгут
+    id: tourniquet
+    value: "4 с; лечит сильное кровотечение"
+    status: active
+    source: data/items.csv
+    referenced_by:
+      - docs/gdd/01_Системы_прототипа.md#3
+    added: 2026-11-05
+
+  - name: Шина
+    id: splint
+    value: "6 с; лечит перелом"
+    status: active
+    source: data/items.csv
+    referenced_by:
+      - docs/gdd/01_Системы_прототипа.md#3
+    added: 2026-11-05
+
+  - name: Вместимость рюкзаков
+    value: "карманы 4; вещмешок 12; РД-54 16; туристический 20; рейдовый 24 ячейки"
+    status: active
+    source: data/items.csv
+    referenced_by:
+      - docs/gdd/01_Системы_прототипа.md#2
+      - Game/Plugins/GameFeatures/RubezhCore/Source/RubezhCoreRuntime/Public/RubezhSettings.h
+    note: "Карманы 4 — значение PocketSlots в RubezhSettings.h, а не строка items.csv. «Карманный слот», которого нет по решению в 00_Core_loop.md, — другое понятие: сохранение вещей при смерти."
+    added: 2026-11-05
