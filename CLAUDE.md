@@ -55,7 +55,8 @@ MMO-lite онлайн-шутер с выживанием, экономикой �
 - Инвентарь: предметы — `data/items.csv` → DataTable `/RubezhCore/Data/DT_Items` (строка `FRubezhItemDefinition`; после правки CSV — переимпорт в редакторе). Таблица прописана в `URubezhSettings` (`Config/DefaultGame.ini`). Сетка `FRubezhInventoryGrid` (6×8, поворот, стопки) — чистая логика с тестами; `URubezhInventoryComponent` на `LyraPlayerState` (добавляет `URubezhComponentInjector`, без правки ассетов), меняется только на сервере, виден только владельцу, пишет вес в `CarriedWeight`.
 - Скорость считает только `Rubezh::Movement::RefreshWalkSpeed` (база × перегруз × спринт). При «неподъёмно» обнуляется и `MinAnalogWalkSpeed` (иначе персонаж идёт со скоростью 200; тег Lyra `Gameplay.MovementStopped` этого не лечит).
 - Консоль для проверки (не в Shipping): `Rubezh.Give <id> [n]`, `Rubezh.Take <id> [n]`, `Rubezh.Inventory`.
-- Ещё нет: интерфейса инвентаря, подбора и выпадения предметов в мире, выхода из игры. Скорость меняется без saved moves — на сервере с лагом возможны откаты (задача Этапа 1).
+- Окно рюкзака (клавиша `I`, задаётся в `URubezhSettings::InventoryKey`): `URubezhInventoryWindow` — собрано кодом без ассетов виджетов, открывается на слое Lyra `UI.Layer.GameMenu`; плитки `URubezhInventoryItemWidget` (ЛКМ — перетащить, ПКМ — повернуть). Клавиша подключается `URubezhInventoryInput` по событию Lyra `BindInputsNow` (Lyra очищает раскладки при каждом возрождении). Размеры и цвета — `Private/UI/RubezhInventoryStyle.h`. В PIE Esc останавливает игру, закрывать окно клавишей I.
+- Ещё нет: подбора и выпадения предметов в мире, выхода из игры. Скорость меняется без saved moves — на сервере с лагом возможны откаты (задача Этапа 1).
 
 ## Командная работа (2+ человека, у каждого свой Claude)
 - Перед работой — `git pull`; после каждого законченного куска — коммит и `git push` маленькими порциями.

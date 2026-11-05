@@ -3,6 +3,7 @@
 #pragma once
 
 #include "Engine/DeveloperSettings.h"
+#include "InputCoreTypes.h"
 
 #include "RubezhSettings.generated.h"
 
@@ -22,6 +23,10 @@ public:
 	// Размер сетки рюкзака в клетках, пока рюкзак не выбирается снаряжением.
 	UPROPERTY(Config, EditAnywhere, Category = "Items", Meta = (ClampMin = 1))
 	FIntPoint DefaultBackpackSize = FIntPoint(6, 8);
+
+	// Клавиша, открывающая и закрывающая окно рюкзака.
+	UPROPERTY(Config, EditAnywhere, Category = "Input")
+	FKey InventoryKey = EKeys::I;
 
 	virtual FName GetCategoryName() const override { return TEXT("Game"); }
 };

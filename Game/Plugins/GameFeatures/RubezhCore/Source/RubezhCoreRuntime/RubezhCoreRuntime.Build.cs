@@ -17,6 +17,9 @@ public class RubezhCoreRuntime : ModuleRules
 				"GameplayAbilities",
 				"GameplayMessageRuntime",
 				"DeveloperSettings",
+				"InputCore",
+				"UMG",
+				"CommonUI",
 			}
 		);
 
@@ -29,6 +32,9 @@ public class RubezhCoreRuntime : ModuleRules
 				"GameplayTasks",
 				"EnhancedInput",
 				"NetCore",
+				"Slate",
+				"SlateCore",
+				"CommonGame",
 			}
 		);
 	}
