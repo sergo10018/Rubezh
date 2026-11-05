@@ -52,7 +52,10 @@ MMO-lite онлайн-шутер с выживанием, экономикой �
 - `URubezhSurvivalSet` — выносливость и вес (GAS), выдаётся игроку через `AbilitySet_RubezhSurvival` → `HeroData_Rubezh` (свои данные персонажа, копия `HeroData_ShooterGame`) → режим `B_Rubezh_Proto`.
 - `Rubezh::Encumbrance` — уровни перегруза; `ERubezhItemCategory` + `Rubezh::Items::IsLostOnDeath`; `URubezhCombatLogoutSubsystem` — запрет выхода 15 с после урона (только сервер).
 - Спринт `URubezhGameplayAbility_Sprint` на Shift (`InputTag.Ability.Dash`): ×1.5 скорости, тратит выносливость (`URubezhGE_SprintStaminaDrain`), не стартует ниже 15 ед. и при перегрузе; восстановление — `URubezhGE_StaminaRegen`. Числа — `Survival/RubezhStaminaRules.h`. Рывок Lyra убран: наш набор `AbilitySet_RubezhHero` = копия `AbilitySet_ShooterHero` без `GA_Hero_Dash`; у `IA_Ability_Dash` снят триггер Pressed (иначе «отпускание» приходит сразу).
-- Ещё не связано с игрой: вес не замедляет движение (нет инвентаря с весом), выхода из игры нет.
+- Инвентарь: предметы — `data/items.csv` → DataTable `/RubezhCore/Data/DT_Items` (строка `FRubezhItemDefinition`; после правки CSV — переимпорт в редакторе). Таблица прописана в `URubezhSettings` (`Config/DefaultGame.ini`). Сетка `FRubezhInventoryGrid` (6×8, поворот, стопки) — чистая логика с тестами; `URubezhInventoryComponent` на `LyraPlayerState` (добавляет `URubezhComponentInjector`, без правки ассетов), меняется только на сервере, виден только владельцу, пишет вес в `CarriedWeight`.
+- Скорость считает только `Rubezh::Movement::RefreshWalkSpeed` (база × перегруз × спринт). При «неподъёмно» обнуляется и `MinAnalogWalkSpeed` (иначе персонаж идёт со скоростью 200; тег Lyra `Gameplay.MovementStopped` этого не лечит).
+- Консоль для проверки (не в Shipping): `Rubezh.Give <id> [n]`, `Rubezh.Take <id> [n]`, `Rubezh.Inventory`.
+- Ещё нет: интерфейса инвентаря, подбора и выпадения предметов в мире, выхода из игры. Скорость меняется без saved moves — на сервере с лагом возможны откаты (задача Этапа 1).
 
 ## Командная работа (2+ человека, у каждого свой Claude)
 - Перед работой — `git pull`; после каждого законченного куска — коммит и `git push` маленькими порциями.

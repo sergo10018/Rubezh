@@ -1,0 +1,28 @@
+---,DisplayName,Category,WeightKg,Width,Height,MaxStack
+pistol_9x18,"Пистолет 9×18",Equipment,0.73,2,1,1
+rifle_762x39,"Автомат 7,62×39",Equipment,3.6,5,2,1
+shotgun_12,"Дробовик помповый 12 к.",Equipment,3.4,5,2,1
+rifle_762x54r,"Снайперская винтовка 7,62×54R",Equipment,4.3,6,2,1
+armor_vest,"Бронежилет",Equipment,8.0,3,3,1
+backpack_tourist,"Рюкзак туристический",Equipment,1.2,4,4,1
+ammo_9x18,"Патроны 9×18",Consumable,0.01,1,1,50
+ammo_762x39,"Патроны 7,62×39",Consumable,0.016,1,1,60
+ammo_12_70,"Патроны 12/70",Consumable,0.04,1,1,20
+ammo_762x54r,"Патроны 7,62×54R",Consumable,0.022,1,1,40
+bandage,"Бинт",Consumable,0.05,1,1,5
+tourniquet,"Жгут",Consumable,0.1,1,1,3
+splint,"Шина",Consumable,0.3,1,2,1
+painkillers,"Обезболивающее",Consumable,0.05,1,1,10
+medkit_small,"Аптечка малая",Consumable,0.3,1,1,1
+medkit_army,"Аптечка армейская",Consumable,0.8,2,1,1
+canned_meat,"Тушёнка",Consumable,0.4,1,1,1
+water_bottle,"Вода 0,5 л",Consumable,0.55,1,2,1
+cleaning_kit,"Набор для чистки оружия",Consumable,0.3,1,1,1
+scrap_metal,"Металлолом",Junk,1.5,2,2,1
+copper_wire,"Медный провод",Junk,0.5,1,1,5
+bolts,"Болты и гайки",Junk,0.2,1,1,20
+circuit_board,"Электронная плата",Junk,0.15,1,1,5
+documents,"Документы",Valuable,0.1,1,1,1
+tool_set,"Набор инструментов",Valuable,2.5,2,1,1
+car_battery,"Автомобильный аккумулятор",Valuable,13.0,2,2,1
+fuel_canister,"Канистра с топливом",Valuable,11.0,2,3,1

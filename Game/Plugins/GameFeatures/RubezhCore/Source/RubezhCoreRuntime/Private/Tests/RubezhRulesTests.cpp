@@ -5,6 +5,7 @@
 #include "Misc/AutomationTest.h"
 #include "Survival/RubezhEncumbrance.h"
 #include "Survival/RubezhStaminaRules.h"
+#include "Movement/RubezhMovementSpeed.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
 
@@ -106,6 +107,21 @@ bool FRubezhSprintStaminaTest::RunTest(const FString& Parameters)
 	// Восстановление идёт и во время спринта, поэтому за секунду расход + восстановление дают итоговую трату.
 	const float NetPerSecond = GetSprintDrainPerTick(ERubezhEncumbranceLevel::Normal) / TickPeriod + RegenPerSecond;
 	TestEqual(TEXT("Расход за период компенсирует восстановление"), NetPerSecond, -SprintNetDrainPerSecond, 0.001f);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRubezhWalkSpeedTest, "Rubezh.Movement.WalkSpeed", RubezhTestFlags)
+
+bool FRubezhWalkSpeedTest::RunTest(const FString& Parameters)
+{
+	using Rubezh::Movement::ComputeWalkSpeed;
+
+	TestEqual(TEXT("Норма, шаг"), ComputeWalkSpeed(600.0f, ERubezhEncumbranceLevel::Normal, false), 600.0f);
+	TestEqual(TEXT("Норма, спринт ×1.5"), ComputeWalkSpeed(600.0f, ERubezhEncumbranceLevel::Normal, true), 900.0f);
+	TestEqual(TEXT("Нагружен, шаг −15 %"), ComputeWalkSpeed(600.0f, ERubezhEncumbranceLevel::Burdened, false), 510.0f, 0.01f);
+	TestEqual(TEXT("Нагружен, спринт"), ComputeWalkSpeed(600.0f, ERubezhEncumbranceLevel::Burdened, true), 765.0f, 0.01f);
+	TestEqual(TEXT("Перегруз — спринт не ускоряет"), ComputeWalkSpeed(600.0f, ERubezhEncumbranceLevel::Overloaded, true), 390.0f, 0.01f);
+	TestEqual(TEXT("Неподъёмно — стоит"), ComputeWalkSpeed(600.0f, ERubezhEncumbranceLevel::Immobile, false), 0.0f);
 	return true;
 }
 

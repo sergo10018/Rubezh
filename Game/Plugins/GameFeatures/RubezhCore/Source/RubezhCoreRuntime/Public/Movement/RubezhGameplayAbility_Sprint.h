@@ -36,10 +36,6 @@ private:
 
 	void OnStaminaChanged(const FOnAttributeChangeData& ChangeData);
 
-	void SetSprintSpeed(const FGameplayAbilityActorInfo* ActorInfo, bool bSprinting);
-
-	float SpeedBeforeSprint = 0.0f;
-
 	FActiveGameplayEffectHandle DrainEffectHandle;
 
 	FDelegateHandle StaminaChangedHandle;

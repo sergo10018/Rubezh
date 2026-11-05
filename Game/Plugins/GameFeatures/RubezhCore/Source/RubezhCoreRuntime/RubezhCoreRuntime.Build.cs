@@ -16,6 +16,7 @@ public class RubezhCoreRuntime : ModuleRules
 				"ModularGameplay",
 				"GameplayAbilities",
 				"GameplayMessageRuntime",
+				"DeveloperSettings",
 			}
 		);
 

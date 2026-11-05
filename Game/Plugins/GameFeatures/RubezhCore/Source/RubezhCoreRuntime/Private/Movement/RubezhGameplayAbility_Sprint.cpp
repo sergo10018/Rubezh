@@ -6,6 +6,7 @@
 #include "AbilitySystemComponent.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Movement/RubezhMovementSpeed.h"
 #include "RubezhGameplayTags.h"
 #include "Survival/RubezhStaminaEffects.h"
 #include "Survival/RubezhStaminaRules.h"
@@ -60,7 +61,8 @@ void URubezhGameplayAbility_Sprint::ActivateAbility(const FGameplayAbilitySpecHa
 
 	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
 
-	SetSprintSpeed(ActorInfo, true);
+	// Тег Status.Sprinting уже выдан (ActivationOwnedTags), так что расчёт скорости учтёт спринт.
+	Rubezh::Movement::RefreshWalkSpeed(Cast<ACharacter>(ActorInfo->AvatarActor.Get()));
 
 	UAbilitySystemComponent* ASC = ActorInfo->AbilitySystemComponent.Get();
 	StaminaChangedHandle = ASC->GetGameplayAttributeValueChangeDelegate(URubezhSurvivalSet::GetStaminaAttribute())
@@ -88,10 +90,9 @@ void URubezhGameplayAbility_Sprint::ActivateAbility(const FGameplayAbilitySpecHa
 
 void URubezhGameplayAbility_Sprint::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled)
 {
-	if (IsActive())
+	const bool bWasActive = IsActive();
+	if (bWasActive)
 	{
-		SetSprintSpeed(ActorInfo, false);
-
 		if (UAbilitySystemComponent* ASC = ActorInfo ? ActorInfo->AbilitySystemComponent.Get() : nullptr)
 		{
 			ASC->GetGameplayAttributeValueChangeDelegate(URubezhSurvivalSet::GetStaminaAttribute()).Remove(StaminaChangedHandle);
@@ -104,7 +105,15 @@ void URubezhGameplayAbility_Sprint::EndAbility(const FGameplayAbilitySpecHandle 
 		DrainEffectHandle.Invalidate();
 	}
 
+	ACharacter* Character = ActorInfo ? Cast<ACharacter>(ActorInfo->AvatarActor.Get()) : nullptr;
+
+	// Super снимает тег Status.Sprinting — скорость пересчитываем после него.
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
+
+	if (bWasActive)
+	{
+		Rubezh::Movement::RefreshWalkSpeed(Character);
+	}
 }
 
 void URubezhGameplayAbility_Sprint::OnSprintInputReleased(float TimeHeld)
@@ -117,25 +126,5 @@ void URubezhGameplayAbility_Sprint::OnStaminaChanged(const FOnAttributeChangeDat
 	if (ChangeData.NewValue <= 0.0f && IsActive())
 	{
 		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
-	}
-}
-
-void URubezhGameplayAbility_Sprint::SetSprintSpeed(const FGameplayAbilityActorInfo* ActorInfo, bool bSprinting)
-{
-	UCharacterMovementComponent* Movement = GetMovement(ActorInfo);
-	if (!Movement)
-	{
-		return;
-	}
-
-	if (bSprinting)
-	{
-		SpeedBeforeSprint = Movement->MaxWalkSpeed;
-		Movement->MaxWalkSpeed = SpeedBeforeSprint * Rubezh::Stamina::SprintSpeedMultiplier;
-	}
-	else if (SpeedBeforeSprint > 0.0f)
-	{
-		Movement->MaxWalkSpeed = SpeedBeforeSprint;
-		SpeedBeforeSprint = 0.0f;
 	}
 }
