@@ -28,6 +28,12 @@ static FDamageStatics& DamageStatics()
 }
 
 
+FLyraIncomingDamageMultiplier& ULyraDamageExecution::GetIncomingDamageMultiplier()
+{
+	static FLyraIncomingDamageMultiplier Hook;
+	return Hook;
+}
+
 ULyraDamageExecution::ULyraDamageExecution()
 {
 	RelevantAttributesToCapture.Add(DamageStatics().BaseDamageDef);
@@ -128,7 +134,14 @@ void ULyraDamageExecution::Execute_Implementation(const FGameplayEffectCustomExe
 	DistanceAttenuation = FMath::Max(DistanceAttenuation, 0.0f);
 
 	// Clamping is done when damage is converted to -health
-	const float DamageDone = FMath::Max(BaseDamage * DistanceAttenuation * PhysicalMaterialAttenuation * DamageInteractionAllowedMultiplier, 0.0f);
+	// Rubezh: target-side protection (armor, clothing).
+	float TargetProtectionMultiplier = 1.0f;
+	if (GetIncomingDamageMultiplier().IsBound())
+	{
+		TargetProtectionMultiplier = FMath::Max(GetIncomingDamageMultiplier().Execute(TargetAbilitySystemComponent, HitActorResult), 0.0f);
+	}
+
+	const float DamageDone = FMath::Max(BaseDamage * DistanceAttenuation * PhysicalMaterialAttenuation * DamageInteractionAllowedMultiplier * TargetProtectionMultiplier, 0.0f);
 
 	if (DamageDone > 0.0f)
 	{

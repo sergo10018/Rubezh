@@ -159,6 +159,58 @@ bool FRubezhInventoryGrid::MoveEntry(int32 EntryIndex, FIntPoint NewPosition, bo
 	return true;
 }
 
+bool FRubezhInventoryGrid::AddEntryAt(FName ItemId, int32 Count, FIntPoint Position, bool bRotated, FRubezhItemLookup Lookup)
+{
+	const FRubezhItemDefinition* Definition = Lookup(ItemId);
+	if (!Definition || Count <= 0 || Count > FMath::Max(Definition->MaxStack, 1) || !IsAreaFree(Position, Definition->GetFootprint(bRotated), Lookup))
+	{
+		return false;
+	}
+
+	FRubezhInventoryEntry& Entry = Entries.AddDefaulted_GetRef();
+	Entry.ItemId = ItemId;
+	Entry.Count = Count;
+	Entry.Position = Position;
+	Entry.bRotated = bRotated;
+	return true;
+}
+
+bool FRubezhInventoryGrid::Resize(FIntPoint NewSize, FRubezhItemLookup Lookup)
+{
+	FRubezhInventoryGrid Result(NewSize);
+	TArray<const FRubezhInventoryEntry*> Displaced;
+
+	for (const FRubezhInventoryEntry& Entry : Entries)
+	{
+		if (Result.IsAreaFree(Entry.Position, GetEntryFootprint(Entry, Lookup), Lookup))
+		{
+			Result.Entries.Add(Entry);
+		}
+		else
+		{
+			Displaced.Add(&Entry);
+		}
+	}
+
+	for (const FRubezhInventoryEntry* Entry : Displaced)
+	{
+		const FRubezhItemDefinition* Definition = Lookup(Entry->ItemId);
+		FIntPoint Position;
+		bool bRotated = false;
+		if (!Definition || !Result.FindFreeSpot(*Definition, Lookup, Position, bRotated))
+		{
+			return false;
+		}
+
+		FRubezhInventoryEntry& Placed = Result.Entries.Add_GetRef(*Entry);
+		Placed.Position = Position;
+		Placed.bRotated = bRotated;
+	}
+
+	*this = MoveTemp(Result);
+	return true;
+}
+
 int32 FRubezhInventoryGrid::CountItem(FName ItemId) const
 {
 	int32 Total = 0;

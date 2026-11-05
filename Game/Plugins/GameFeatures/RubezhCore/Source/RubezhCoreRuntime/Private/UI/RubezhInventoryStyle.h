@@ -18,6 +18,13 @@ namespace Rubezh::InventoryStyle
 	inline constexpr int32 ItemCountFontSize = 12;
 	inline constexpr float DraggedItemOpacity = 0.35f;
 
+	// Колонка снаряжения слева от сетки.
+	inline constexpr float EquipSlotWidth = 190.0f;
+	inline constexpr float EquipSlotHeight = 58.0f;
+	inline constexpr float EquipSlotGap = 6.0f;
+	inline constexpr float ColumnGap = 20.0f;
+	inline constexpr float ErrorShowSeconds = 3.0f;
+
 	// Цвета линейные: на экране они светлее, чем кажутся по числам.
 	inline const FLinearColor ScreenDim(0.0f, 0.0f, 0.0f, 0.55f);
 	inline const FLinearColor WindowBackground(0.012f, 0.012f, 0.01f, 0.97f);

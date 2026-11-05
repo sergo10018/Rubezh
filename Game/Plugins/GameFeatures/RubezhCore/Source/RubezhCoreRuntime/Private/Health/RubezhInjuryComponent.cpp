@@ -239,9 +239,15 @@ void URubezhInjuryComponent::HandleHealthChanged(AActor* Instigator, AActor* Cau
 	Hit.Damage = OldValue - NewValue;
 	if (Spec)
 	{
-		if (const FHitResult* HitResult = Spec->GetEffectContext().GetHitResult())
+		const FHitResult* HitResult = Spec->GetEffectContext().GetHitResult();
+		if (HitResult)
 		{
 			Hit.bLegHit = IsLegBone(HitResult->BoneName);
+		}
+		if (const URubezhInventoryComponent* Inventory = URubezhInventoryComponent::FindForActor(GetPawn<APawn>()))
+		{
+			const ERubezhBodyZone Zone = HitResult ? Rubezh::Equipment::GetZoneForBone(HitResult->BoneName) : ERubezhBodyZone::Torso;
+			Hit.BleedChanceMultiplier = Inventory->GetProtection(Zone).BleedChanceMultiplier;
 		}
 	}
 	AddInjuries(RollHitInjuries(Hit, Random));

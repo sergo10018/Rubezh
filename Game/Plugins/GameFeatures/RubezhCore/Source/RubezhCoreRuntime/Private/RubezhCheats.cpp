@@ -7,6 +7,9 @@
 #include "HAL/IConsoleManager.h"
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemGlobals.h"
+#include "Character/LyraHealthComponent.h"
+#include "GameplayEffect.h"
+#include "Items/RubezhEquipment.h"
 #include "Health/RubezhHealthEffects.h"
 #include "Health/RubezhInjuryComponent.h"
 #include "Items/RubezhInventoryComponent.h"
@@ -123,6 +126,99 @@ namespace
 		ASC->ApplyGameplayEffectSpecToSelf(*Spec.Data);
 	}
 
+	void EquipItem(const TArray<FString>& Args, UWorld* World)
+	{
+		URubezhInventoryComponent* Inventory = (World && World->GetNetMode() != NM_Client) ? FindLocalInventory(World) : nullptr;
+		if (!Inventory || Args.Num() < 1)
+		{
+			UE_LOG(LogRubezh, Display, TEXT("Rubezh.Equip <ItemId> — надеть (если предмета нет в рюкзаке, он сначала выдаётся)"));
+			return;
+		}
+
+		const FName ItemId(*Args[0]);
+		auto FindIndex = [Inventory, ItemId]()
+		{
+			return Inventory->GetGrid().GetEntries().IndexOfByPredicate([ItemId](const FRubezhInventoryEntry& Entry) { return Entry.ItemId == ItemId; });
+		};
+		if (FindIndex() == INDEX_NONE)
+		{
+			Inventory->AddItem(ItemId, 1);
+		}
+		const int32 Index = FindIndex();
+		if (Index == INDEX_NONE)
+		{
+			UE_LOG(LogRubezh, Warning, TEXT("Rubezh.Equip: '%s' не поместился в рюкзак"), *Args[0]);
+			return;
+		}
+
+		FRubezhInventoryGrid Grid = Inventory->GetGrid();
+		Rubezh::Equipment::FEquipped Equipped = Inventory->GetEquippedItems();
+		const Rubezh::Equipment::EResult Result = Rubezh::Equipment::Equip(Grid, Equipped, Index,
+			[Inventory](FName Id) { return Inventory->FindDefinition(Id); }, URubezhInventoryComponent::GetPocketsSize());
+		Inventory->ServerEquipEntry(Index);
+		UE_LOG(LogRubezh, Display, TEXT("Rubezh.Equip %s: %s"), *Args[0],
+			Result == Rubezh::Equipment::EResult::Ok ? TEXT("надето") : Rubezh::Equipment::Describe(Result));
+	}
+
+	void UnequipItem(const TArray<FString>& Args, UWorld* World)
+	{
+		URubezhInventoryComponent* Inventory = (World && World->GetNetMode() != NM_Client) ? FindLocalInventory(World) : nullptr;
+		const FString Name = Args.Num() > 0 ? Args[0].ToLower() : FString();
+		const ERubezhEquipSlot Slot =
+			Name == TEXT("head") ? ERubezhEquipSlot::Head :
+			Name == TEXT("armor") ? ERubezhEquipSlot::Armor :
+			Name == TEXT("top") ? ERubezhEquipSlot::Top :
+			Name == TEXT("bottom") ? ERubezhEquipSlot::Bottom :
+			Name == TEXT("backpack") ? ERubezhEquipSlot::Backpack : ERubezhEquipSlot::None;
+		if (!Inventory || Slot == ERubezhEquipSlot::None)
+		{
+			UE_LOG(LogRubezh, Display, TEXT("Rubezh.Unequip head|armor|top|bottom|backpack — снять в рюкзак"));
+			return;
+		}
+
+		FRubezhInventoryGrid Grid = Inventory->GetGrid();
+		Rubezh::Equipment::FEquipped Equipped = Inventory->GetEquippedItems();
+		const Rubezh::Equipment::EResult Result = Rubezh::Equipment::Unequip(Grid, Equipped, Slot, {}, false,
+			[Inventory](FName Id) { return Inventory->FindDefinition(Id); }, URubezhInventoryComponent::GetPocketsSize());
+		Inventory->ServerUnequip(Slot, FIntPoint::ZeroValue, false, true);
+		UE_LOG(LogRubezh, Display, TEXT("Rubezh.Unequip %s: %s"), *Name,
+			Result == Rubezh::Equipment::EResult::Ok ? TEXT("снято") : Rubezh::Equipment::Describe(Result));
+	}
+
+	/** Попадание через расчёт урона Lyra (как от оружия) в выбранную часть тела — проверить броню. */
+	void ShootSelf(const TArray<FString>& Args, UWorld* World)
+	{
+		APawn* Pawn = FindLocalPawnOnServer(World);
+		UAbilitySystemComponent* ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Pawn);
+		const float Damage = Args.Num() > 0 ? FCString::Atof(*Args[0]) : 0.0f;
+		const FString Zone = Args.Num() > 1 ? Args[1].ToLower() : FString(TEXT("torso"));
+		const FName Bone = Zone == TEXT("head") ? FName(TEXT("head")) : Zone == TEXT("arms") ? FName(TEXT("lowerarm_l"))
+			: Zone == TEXT("legs") ? FName(TEXT("calf_l")) : FName(TEXT("spine_03"));
+		const TSubclassOf<UGameplayEffect> DamageEffect = LoadClass<UGameplayEffect>(nullptr,
+			TEXT("/Game/GameplayEffects/Damage/GE_Damage_Basic_SetByCaller.GE_Damage_Basic_SetByCaller_C"));
+		const ULyraHealthComponent* Health = ULyraHealthComponent::FindHealthComponent(Pawn);
+		if (!ASC || !DamageEffect || !Health || Damage <= 0.0f)
+		{
+			UE_LOG(LogRubezh, Display, TEXT("Rubezh.Shoot <урон> [head|torso|arms|legs] — попадание как от оружия, с учётом брони"));
+			return;
+		}
+
+		FGameplayEffectContextHandle Context = ASC->MakeEffectContext();
+		FHitResult Hit;
+		Hit.BoneName = Bone;
+		Hit.HitObjectHandle = FActorInstanceHandle(Pawn);
+		Hit.ImpactPoint = Pawn->GetActorLocation();
+		Hit.Location = Hit.ImpactPoint;
+		Context.AddHitResult(Hit, true);
+
+		const float Before = Health->GetHealth();
+		const FGameplayEffectSpecHandle Spec = ASC->MakeOutgoingSpec(DamageEffect, 1.0f, Context);
+		Spec.Data->SetSetByCallerMagnitude(FGameplayTag::RequestGameplayTag(TEXT("SetByCaller.Damage")), Damage);
+		ASC->ApplyGameplayEffectSpecToSelf(*Spec.Data);
+		UE_LOG(LogRubezh, Display, TEXT("Rubezh.Shoot %.0f в %s (%s): здоровье %.1f → %.1f"),
+			Damage, *Zone, *Bone.ToString(), Before, Health->GetHealth());
+	}
+
 	void PrintInventory(const TArray<FString>& Args, UWorld* World)
 	{
 		const URubezhInventoryComponent* Inventory = FindLocalInventory(World);
@@ -132,6 +228,10 @@ namespace
 			return;
 		}
 
+		for (const ERubezhEquipSlot Slot : Rubezh::Equipment::AllSlots)
+		{
+			UE_LOG(LogRubezh, Display, TEXT("  [%s] %s"), Rubezh::Equipment::GetSlotName(Slot), *Inventory->GetEquipped(Slot).ToString());
+		}
 		const FRubezhInventoryGrid& Grid = Inventory->GetGrid();
 		UE_LOG(LogRubezh, Display, TEXT("Рюкзак %dx%d, стопок %d, вес %.2f кг"),
 			Grid.GetSize().X, Grid.GetSize().Y, Grid.GetEntries().Num(), Inventory->GetTotalWeight());
@@ -161,6 +261,18 @@ namespace
 	FAutoConsoleCommandWithWorldAndArgs HurtCommand(
 		TEXT("Rubezh.Hurt"), TEXT("Ранить себя: Rubezh.Hurt <урон>"),
 		FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&HurtPlayer));
+
+	FAutoConsoleCommandWithWorldAndArgs EquipCommand(
+		TEXT("Rubezh.Equip"), TEXT("Надеть предмет: Rubezh.Equip <ItemId>"),
+		FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&EquipItem));
+
+	FAutoConsoleCommandWithWorldAndArgs UnequipCommand(
+		TEXT("Rubezh.Unequip"), TEXT("Снять снаряжение: Rubezh.Unequip head|armor|top|bottom|backpack"),
+		FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&UnequipItem));
+
+	FAutoConsoleCommandWithWorldAndArgs ShootCommand(
+		TEXT("Rubezh.Shoot"), TEXT("Попадание в себя через расчёт урона Lyra: Rubezh.Shoot <урон> [head|torso|arms|legs]"),
+		FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&ShootSelf));
 
 	FAutoConsoleCommandWithWorldAndArgs InventoryCommand(
 		TEXT("Rubezh.Inventory"), TEXT("Показать содержимое рюкзака и вес"),

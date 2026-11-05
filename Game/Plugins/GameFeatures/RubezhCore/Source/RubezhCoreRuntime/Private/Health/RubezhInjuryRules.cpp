@@ -73,11 +73,12 @@ namespace Rubezh::Injuries
 		}
 
 		FMask Result = 0;
-		if (Random.FRand() < BleedingChance)
+		const float BleedFactor = FMath::Clamp(Hit.BleedChanceMultiplier, 0.0f, 1.0f);
+		if (Random.FRand() < BleedingChance * BleedFactor)
 		{
 			Result |= Bit(ERubezhInjury::Bleeding);
 		}
-		if (Hit.Damage >= HeavyHitMinDamage && Random.FRand() < HeavyBleedingChance)
+		if (Hit.Damage >= HeavyHitMinDamage && Random.FRand() < HeavyBleedingChance * BleedFactor)
 		{
 			Result |= Bit(ERubezhInjury::HeavyBleeding);
 		}

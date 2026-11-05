@@ -3,21 +3,25 @@
 #pragma once
 
 #include "Components/ActorComponent.h"
+#include "Items/RubezhEquipment.h"
 #include "Items/RubezhInventoryGrid.h"
 
 #include "RubezhInventoryComponent.generated.h"
 
 class APawn;
 class APlayerState;
+class UAbilitySystemComponent;
 class UDataTable;
+struct FHitResult;
 struct FOnAttributeChangeData;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FRubezhInventoryChangedEvent);
 
 /**
- * Рюкзак игрока. Живёт на PlayerState, содержимое меняет только сервер и реплицирует владельцу.
- * После каждого изменения пересчитывает вес в атрибут CarriedWeight (URubezhSurvivalSet),
- * от которого зависят перегруз, скорость и спринт.
+ * Рюкзак и надетое снаряжение игрока. Живёт на PlayerState, меняет только сервер и реплицирует владельцу.
+ * Размер сетки задаёт надетый рюкзак (без него — карманы). После каждого изменения пересчитывает вес
+ * (CarriedWeight: сетка + надетое) и лимит (MaxCarryWeight: база + прибавка рюкзака) в URubezhSurvivalSet.
+ * Защиту надетого читает расчёт урона Lyra (через GetIncomingDamageMultiplier) и травмы.
  */
 UCLASS(ClassGroup = Rubezh, Meta = (BlueprintSpawnableComponent))
 class RUBEZHCORERUNTIME_API URubezhInventoryComponent : public UActorComponent
@@ -46,9 +50,35 @@ public:
 	UFUNCTION(Server, Reliable, BlueprintCallable, Category = "Rubezh|Inventory")
 	void ServerDropEntry(int32 EntryIndex);
 
+	/** Надеть предмет из сетки (что было в слоте — вернётся в сетку). */
+	UFUNCTION(Server, Reliable)
+	void ServerEquipEntry(int32 EntryIndex);
+
+	/** Снять в сетку: на место Position (bAutoPlace = false) или куда влезет. */
+	UFUNCTION(Server, Reliable)
+	void ServerUnequip(ERubezhEquipSlot Slot, FIntPoint Position, bool bRotated, bool bAutoPlace);
+
+	/** Снять и бросить на землю. */
+	UFUNCTION(Server, Reliable)
+	void ServerDropEquipped(ERubezhEquipSlot Slot);
+
 	UFUNCTION(BlueprintPure, Category = "Rubezh|Inventory")
 	int32 CountItem(FName ItemId) const { return Grid.CountItem(ItemId); }
 
+	/** Что надето в слоте (None — пусто). */
+	FName GetEquipped(ERubezhEquipSlot Slot) const;
+	const Rubezh::Equipment::FEquipped& GetEquippedItems() const { return Equipped; }
+
+	/** Защита надетого для части тела. */
+	Rubezh::Equipment::FProtection GetProtection(ERubezhBodyZone Zone) const;
+
+	/** Сетка без рюкзака (из настроек). */
+	static FIntPoint GetPocketsSize();
+
+	/** Для расчёта урона Lyra: во сколько раз броня цели уменьшает урон от этого попадания. */
+	static float GetIncomingDamageMultiplier(const UAbilitySystemComponent* Target, const FHitResult* Hit);
+
+	/** Вес сетки и надетого, кг. */
 	UFUNCTION(BlueprintPure, Category = "Rubezh|Inventory")
 	float GetTotalWeight() const;
 
@@ -78,11 +108,19 @@ private:
 
 	void HandleGridChanged();
 	void UpdateCarriedWeight() const;
+	void ApplyStartingEquipment();
+	void TrySyncWeightAttributes();
+	void LogEquipFailure(Rubezh::Equipment::EResult Result) const;
 
 	FDelegateHandle CarriedWeightChangedHandle;
+	FTimerHandle WeightSyncTimer;
 
 	UPROPERTY(ReplicatedUsing = OnRep_Grid)
 	FRubezhInventoryGrid Grid;
+
+	// Надетое по слотам (порядок — Rubezh::Equipment::AllSlots).
+	UPROPERTY(ReplicatedUsing = OnRep_Grid)
+	TArray<FName> Equipped;
 
 	UPROPERTY(Transient)
 	TObjectPtr<const UDataTable> ItemTable;

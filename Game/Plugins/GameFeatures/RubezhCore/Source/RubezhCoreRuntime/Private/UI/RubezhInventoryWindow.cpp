@@ -8,6 +8,8 @@
 #include "Components/Border.h"
 #include "Components/CanvasPanel.h"
 #include "Components/CanvasPanelSlot.h"
+#include "Components/HorizontalBox.h"
+#include "Components/HorizontalBoxSlot.h"
 #include "Components/Overlay.h"
 #include "Components/OverlaySlot.h"
 #include "Components/ProgressBar.h"
@@ -19,7 +21,10 @@
 #include "GameFramework/PlayerController.h"
 #include "Health/RubezhInjuryComponent.h"
 #include "Input/UIActionBindingHandle.h"
+#include "Items/RubezhEquipment.h"
 #include "Items/RubezhInventoryComponent.h"
+#include "TimerManager.h"
+#include "UI/RubezhEquipmentSlotWidget.h"
 #include "RubezhSettings.h"
 #include "Survival/RubezhSurvivalSet.h"
 #include "UI/RubezhInventoryItemWidget.h"
@@ -88,10 +93,17 @@ void URubezhInventoryWindow::BuildLayout()
 	PanelSlot->SetHorizontalAlignment(HAlign_Center);
 	PanelSlot->SetVerticalAlignment(VAlign_Center);
 
-	UVerticalBox* Column = WidgetTree->ConstructWidget<UVerticalBox>();
-	Panel->SetContent(Column);
+	WindowPanel = Panel;
 
-	Column->AddChildToVerticalBox(MakeText(*WidgetTree, FText::FromString(TEXT("Рюкзак")), TitleFontSize));
+	UHorizontalBox* Columns = WidgetTree->ConstructWidget<UHorizontalBox>();
+	Panel->SetContent(Columns);
+	Columns->AddChildToHorizontalBox(BuildEquipmentColumn())->SetPadding(FMargin(0.0f, 0.0f, ColumnGap, 0.0f));
+
+	UVerticalBox* Column = WidgetTree->ConstructWidget<UVerticalBox>();
+	Columns->AddChildToHorizontalBox(Column);
+
+	TitleText = MakeText(*WidgetTree, FText::FromString(TEXT("Рюкзак")), TitleFontSize);
+	Column->AddChildToVerticalBox(TitleText);
 	HintLine = MakeText(*WidgetTree, FText::GetEmpty(), TextFontSize - 2, HintText);
 	Column->AddChildToVerticalBox(HintLine);
 	ShowDropToGroundHint(false);
@@ -124,6 +136,29 @@ void URubezhInventoryWindow::BuildLayout()
 	PreviewSlot->SetZOrder(PreviewZOrder);
 }
 
+UWidget* URubezhInventoryWindow::BuildEquipmentColumn()
+{
+	using namespace Rubezh::InventoryStyle;
+
+	UVerticalBox* Column = WidgetTree->ConstructWidget<UVerticalBox>();
+	Column->AddChildToVerticalBox(MakeText(*WidgetTree, FText::FromString(TEXT("Снаряжение")), TitleFontSize));
+	AddSpacer(*WidgetTree, *Column, SectionSpacing);
+
+	for (const ERubezhEquipSlot EquipSlot : Rubezh::Equipment::AllSlots)
+	{
+		URubezhEquipmentSlotWidget* SlotWidget = CreateWidget<URubezhEquipmentSlotWidget>(this);
+		SlotWidget->Setup(this, EquipSlot);
+		Column->AddChildToVerticalBox(SlotWidget)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, EquipSlotGap));
+		EquipSlots.Add(SlotWidget);
+	}
+
+	AddSpacer(*WidgetTree, *Column, SectionSpacing);
+	ProtectionText = MakeText(*WidgetTree, FText::GetEmpty(), TextFontSize - 1, HintText);
+	ProtectionText->SetAutoWrapText(true);
+	Column->AddChildToVerticalBox(ProtectionText);
+	return Column;
+}
+
 void URubezhInventoryWindow::NativeOnActivated()
 {
 	Super::NativeOnActivated();
@@ -138,6 +173,11 @@ void URubezhInventoryWindow::NativeOnActivated()
 
 void URubezhInventoryWindow::NativeOnDeactivated()
 {
+	if (const UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().ClearTimer(ErrorTimer);
+	}
+	bShowingError = false;
 	if (URubezhInventoryComponent* Inventory = BoundInventory.Get())
 	{
 		Inventory->OnInventoryChanged.RemoveDynamic(this, &ThisClass::Refresh);
@@ -187,6 +227,105 @@ void URubezhInventoryWindow::Refresh()
 	RebuildCells(Inventory->GetGrid().GetSize());
 	RefreshWeight(*Inventory);
 	RefreshItems(*Inventory);
+	RefreshEquipment(*Inventory);
+}
+
+void URubezhInventoryWindow::RefreshEquipment(const URubezhInventoryComponent& Inventory)
+{
+	for (URubezhEquipmentSlotWidget* SlotWidget : EquipSlots)
+	{
+		const FName ItemId = Inventory.GetEquipped(SlotWidget->GetEquipSlot());
+		SlotWidget->SetItem(ItemId, ItemId.IsNone() ? nullptr : Inventory.FindDefinition(ItemId));
+		SlotWidget->SetRenderOpacity(1.0f);
+	}
+
+	const FName Backpack = Inventory.GetEquipped(ERubezhEquipSlot::Backpack);
+	const FRubezhItemDefinition* BackpackItem = Backpack.IsNone() ? nullptr : Inventory.FindDefinition(Backpack);
+	TitleText->SetText(FText::FromString(BackpackItem
+		? FString::Printf(TEXT("Рюкзак: %s"), *BackpackItem->DisplayName.ToString())
+		: FString(TEXT("Карманы (рюкзака нет)"))));
+
+	// Сколько урона снимает снаряжение по частям тела.
+	TArray<FString> Zones;
+	for (const ERubezhBodyZone Zone : { ERubezhBodyZone::Head, ERubezhBodyZone::Torso, ERubezhBodyZone::Arms, ERubezhBodyZone::Legs })
+	{
+		const float Reduction = (1.0f - Inventory.GetProtection(Zone).DamageMultiplier) * 100.0f;
+		Zones.Add(FString::Printf(TEXT("%s %.0f %%"), Rubezh::Equipment::GetZoneName(Zone), Reduction));
+	}
+	auto Lookup = [&Inventory](FName Id) { return Inventory.FindDefinition(Id); };
+	ProtectionText->SetText(FText::FromString(FString::Printf(TEXT("Защита от урона:\n%s\nТепло: %.0f\nЛимит веса: +%.0f кг от рюкзака"),
+		*FString::Join(Zones, TEXT("\n")), Rubezh::Equipment::GetWarmth(Inventory.GetEquippedItems(), Lookup),
+		Rubezh::Equipment::GetCarryBonusKg(Inventory.GetEquippedItems(), Lookup))));
+}
+
+const FRubezhItemDefinition* URubezhInventoryWindow::FindEntryDefinition(int32 EntryIndex) const
+{
+	const URubezhInventoryComponent* Inventory = BoundInventory.Get();
+	return (Inventory && Inventory->GetGrid().GetEntries().IsValidIndex(EntryIndex))
+		? Inventory->FindDefinition(Inventory->GetGrid().GetEntries()[EntryIndex].ItemId) : nullptr;
+}
+
+void URubezhInventoryWindow::RequestEquip(int32 EntryIndex)
+{
+	URubezhInventoryComponent* Inventory = BoundInventory.Get();
+	if (!Inventory)
+	{
+		return;
+	}
+
+	// Проверяем у себя теми же правилами, что и сервер, — чтобы сразу сказать, почему нельзя.
+	FRubezhInventoryGrid Grid = Inventory->GetGrid();
+	Rubezh::Equipment::FEquipped Equipped = Inventory->GetEquippedItems();
+	const Rubezh::Equipment::EResult Result = Rubezh::Equipment::Equip(Grid, Equipped, EntryIndex,
+		[Inventory](FName Id) { return Inventory->FindDefinition(Id); }, URubezhInventoryComponent::GetPocketsSize());
+	if (Result != Rubezh::Equipment::EResult::Ok)
+	{
+		ShowError(Rubezh::Equipment::Describe(Result));
+		Refresh();
+		return;
+	}
+	Inventory->ServerEquipEntry(EntryIndex);
+	Refresh();
+}
+
+void URubezhInventoryWindow::RequestUnequip(ERubezhEquipSlot EquipSlot, TOptional<FIntPoint> Cell, bool bRotated)
+{
+	URubezhInventoryComponent* Inventory = BoundInventory.Get();
+	if (!Inventory)
+	{
+		return;
+	}
+
+	FRubezhInventoryGrid Grid = Inventory->GetGrid();
+	Rubezh::Equipment::FEquipped Equipped = Inventory->GetEquippedItems();
+	const Rubezh::Equipment::EResult Result = Rubezh::Equipment::Unequip(Grid, Equipped, EquipSlot, Cell, bRotated,
+		[Inventory](FName Id) { return Inventory->FindDefinition(Id); }, URubezhInventoryComponent::GetPocketsSize());
+	if (Result != Rubezh::Equipment::EResult::Ok)
+	{
+		ShowError(Rubezh::Equipment::Describe(Result));
+		Refresh();
+		return;
+	}
+	Inventory->ServerUnequip(EquipSlot, Cell.Get(FIntPoint::ZeroValue), bRotated, !Cell.IsSet());
+	Refresh();
+}
+
+void URubezhInventoryWindow::ShowError(const FString& Message)
+{
+	using namespace Rubezh::InventoryStyle;
+	bShowingError = true;
+	HintLine->SetText(FText::FromString(Message));
+	HintLine->SetColorAndOpacity(FSlateColor(WarningText));
+	if (const UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().SetTimer(ErrorTimer, this, &ThisClass::ClearError, ErrorShowSeconds, false);
+	}
+}
+
+void URubezhInventoryWindow::ClearError()
+{
+	bShowingError = false;
+	ShowDropToGroundHint(false);
 }
 
 void URubezhInventoryWindow::RebuildCells(FIntPoint GridSize)
@@ -328,7 +467,7 @@ bool URubezhInventoryWindow::NativeOnDragOver(const FGeometry& InGeometry, const
 	if (!IsOverGrid(InDragDropEvent))
 	{
 		HideDropPreview();
-		ShowDropToGroundHint(true);
+		ShowDropToGroundHint(!IsOverWindow(InDragDropEvent));
 		return true;
 	}
 	ShowDropToGroundHint(false);
@@ -361,14 +500,37 @@ bool URubezhInventoryWindow::NativeOnDrop(const FGeometry& InGeometry, const FDr
 
 	const URubezhInventoryDragOperation* Operation = Cast<URubezhInventoryDragOperation>(InOperation);
 	URubezhInventoryComponent* Inventory = BoundInventory.Get();
-	if (Operation && Inventory && !IsOverGrid(InDragDropEvent))
+	const bool bFromSlot = Operation && Operation->FromSlot != ERubezhEquipSlot::None;
+
+	// За окном — бросить на землю.
+	if (Operation && Inventory && !IsOverWindow(InDragDropEvent))
 	{
-		Inventory->ServerDropEntry(Operation->EntryIndex);
+		if (bFromSlot)
+		{
+			Inventory->ServerDropEquipped(Operation->FromSlot);
+		}
+		else
+		{
+			Inventory->ServerDropEntry(Operation->EntryIndex);
+		}
+		Refresh();
+		return true;
+	}
+
+	// В окне, но не над сеткой (например, над колонкой снаряжения) — ничего не делаем.
+	if (Operation && !IsOverGrid(InDragDropEvent))
+	{
 		Refresh();
 		return true;
 	}
 
 	FIntPoint Cell;
+	if (bFromSlot && Inventory)
+	{
+		EvaluateDrop(InDragDropEvent, *Operation, Cell);
+		RequestUnequip(Operation->FromSlot, Cell, Operation->bRotated);
+		return true;
+	}
 	if (!Operation || !Inventory || !EvaluateDrop(InDragDropEvent, *Operation, Cell))
 	{
 		// Не обработали — перетаскивание считается отменённым, плитка вернётся на место.
@@ -400,10 +562,15 @@ bool URubezhInventoryWindow::IsOverGrid(const FDragDropEvent& DragDropEvent) con
 	return GridCanvas->GetCachedGeometry().IsUnderLocation(DragDropEvent.GetScreenSpacePosition());
 }
 
+bool URubezhInventoryWindow::IsOverWindow(const FDragDropEvent& DragDropEvent) const
+{
+	return WindowPanel->GetCachedGeometry().IsUnderLocation(DragDropEvent.GetScreenSpacePosition());
+}
+
 void URubezhInventoryWindow::ShowDropToGroundHint(bool bShow)
 {
 	using namespace Rubezh::InventoryStyle;
-	if (!HintLine)
+	if (!HintLine || (bShowingError && !bShow))
 	{
 		return;
 	}
@@ -417,6 +584,6 @@ void URubezhInventoryWindow::ShowDropToGroundHint(bool bShow)
 
 	const FString CloseKey = GetDefault<URubezhSettings>()->InventoryKey.GetDisplayName().ToString();
 	HintLine->SetText(FText::FromString(FString::Printf(
-		TEXT("ЛКМ — переложить · ПКМ — повернуть · двойной клик — применить · за сетку — выбросить · %s — закрыть"), *CloseKey)));
+		TEXT("ЛКМ — переложить · ПКМ — повернуть · двойной клик — применить или надеть · за окно — выбросить · %s — закрыть"), *CloseKey)));
 	HintLine->SetColorAndOpacity(FSlateColor(HintText));
 }

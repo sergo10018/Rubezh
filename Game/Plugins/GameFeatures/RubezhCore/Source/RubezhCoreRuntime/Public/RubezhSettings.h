@@ -20,9 +20,13 @@ public:
 	UPROPERTY(Config, EditAnywhere, Category = "Items", Meta = (RequiredAssetDataTags = "RowStructure=/Script/RubezhCoreRuntime.RubezhItemDefinition"))
 	TSoftObjectPtr<UDataTable> ItemTable;
 
-	// Размер сетки рюкзака в клетках, пока рюкзак не выбирается снаряжением.
+	// Сетка без рюкзака — карманы, в клетках.
 	UPROPERTY(Config, EditAnywhere, Category = "Items", Meta = (ClampMin = 1))
-	FIntPoint DefaultBackpackSize = FIntPoint(6, 8);
+	FIntPoint PocketsSize = FIntPoint(4, 2);
+
+	// Что надето на новом персонаже (идентификаторы предметов из таблицы).
+	UPROPERTY(Config, EditAnywhere, Category = "Items")
+	TArray<FName> StartingEquipment = { TEXT("backpack_sack"), TEXT("jacket_windbreaker"), TEXT("pants_work") };
 
 	// Клавиша, открывающая и закрывающая окно рюкзака.
 	UPROPERTY(Config, EditAnywhere, Category = "Input")

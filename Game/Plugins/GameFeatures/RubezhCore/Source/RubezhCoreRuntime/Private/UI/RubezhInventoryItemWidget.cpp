@@ -10,6 +10,7 @@
 #include "Components/SizeBox.h"
 #include "Components/TextBlock.h"
 #include "Health/RubezhInjuryRules.h"
+#include "Items/RubezhEquipment.h"
 #include "UI/RubezhInventoryStyle.h"
 #include "UI/RubezhInventoryWindow.h"
 
@@ -80,9 +81,19 @@ void URubezhInventoryItemWidget::Setup(URubezhInventoryWindow* InWindow, int32 I
 FText URubezhInventoryItemWidget::BuildTooltip() const
 {
 	const float StackWeight = Definition.WeightKg * Entry.Count;
-	const TCHAR* UseHint = Rubezh::Injuries::IsMedical(Definition) ? TEXT("\nДвойной клик — применить") : TEXT("");
-	return FText::FromString(FString::Printf(TEXT("%s\n%d шт. × %.3g кг = %.2f кг\nЛКМ — переложить, ПКМ — повернуть%s"),
-		*Definition.DisplayName.ToString(), Entry.Count, Definition.WeightKg, StackWeight, UseHint));
+	const FString Stats = Rubezh::Equipment::DescribeStats(Definition);
+	FString UseHint;
+	if (Rubezh::Injuries::IsMedical(Definition))
+	{
+		UseHint = TEXT("\nДвойной клик — применить");
+	}
+	else if (Definition.EquipSlot != ERubezhEquipSlot::None)
+	{
+		UseHint = FString::Printf(TEXT("\nДвойной клик или перетащить в слот «%s» — надеть"), Rubezh::Equipment::GetSlotName(Definition.EquipSlot));
+	}
+	return FText::FromString(FString::Printf(TEXT("%s\n%s%d шт. × %.3g кг = %.2f кг\nЛКМ — переложить, ПКМ — повернуть%s"),
+		*Definition.DisplayName.ToString(), Stats.IsEmpty() ? TEXT("") : *(Stats + TEXT("\n")),
+		Entry.Count, Definition.WeightKg, StackWeight, *UseHint));
 }
 
 FReply URubezhInventoryItemWidget::NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
@@ -104,10 +115,18 @@ FReply URubezhInventoryItemWidget::NativeOnMouseButtonDown(const FGeometry& InGe
 
 FReply URubezhInventoryItemWidget::NativeOnMouseButtonDoubleClick(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
 {
-	if (Window.IsValid() && InMouseEvent.GetEffectingButton() == EKeys::LeftMouseButton && Rubezh::Injuries::IsMedical(Definition))
+	if (Window.IsValid() && InMouseEvent.GetEffectingButton() == EKeys::LeftMouseButton)
 	{
-		Window->RequestUse(EntryIndex);
-		return FReply::Handled();
+		if (Rubezh::Injuries::IsMedical(Definition))
+		{
+			Window->RequestUse(EntryIndex);
+			return FReply::Handled();
+		}
+		if (Definition.EquipSlot != ERubezhEquipSlot::None)
+		{
+			Window->RequestEquip(EntryIndex);
+			return FReply::Handled();
+		}
 	}
 	return Super::NativeOnMouseButtonDoubleClick(InGeometry, InMouseEvent);
 }

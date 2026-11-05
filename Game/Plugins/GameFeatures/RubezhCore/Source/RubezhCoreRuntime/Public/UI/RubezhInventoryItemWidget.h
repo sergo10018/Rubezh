@@ -4,6 +4,7 @@
 
 #include "Blueprint/DragDropOperation.h"
 #include "Blueprint/UserWidget.h"
+#include "Items/RubezhEquipSlot.h"
 #include "Items/RubezhInventoryGrid.h"
 
 #include "RubezhInventoryItemWidget.generated.h"
@@ -13,7 +14,10 @@ class URubezhInventoryWindow;
 class USizeBox;
 class UTextBlock;
 
-/** Что перетаскиваем: какую стопку и за какую точку её взяли (в пикселях от левого верхнего угла). */
+/**
+ * Что перетаскиваем: стопку из сетки (EntryIndex) или надетый предмет (FromSlot),
+ * и за какую точку его взяли (в пикселях от левого верхнего угла).
+ */
 UCLASS()
 class RUBEZHCORERUNTIME_API URubezhInventoryDragOperation : public UDragDropOperation
 {
@@ -21,6 +25,7 @@ class RUBEZHCORERUNTIME_API URubezhInventoryDragOperation : public UDragDropOper
 
 public:
 	int32 EntryIndex = INDEX_NONE;
+	ERubezhEquipSlot FromSlot = ERubezhEquipSlot::None;
 	bool bRotated = false;
 	FIntPoint Footprint = FIntPoint(1, 1);
 	FVector2D GrabOffset = FVector2D::ZeroVector;

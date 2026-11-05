@@ -7,6 +7,14 @@
 #include "LyraDamageExecution.generated.h"
 
 class UObject;
+class UAbilitySystemComponent;
+struct FHitResult;
+
+/**
+ * Hook for game feature plugins: returns a multiplier for damage the target receives (e.g. armor).
+ * Rubezh: bound by RubezhCoreRuntime (equipment protection).
+ */
+DECLARE_DELEGATE_RetVal_TwoParams(float, FLyraIncomingDamageMultiplier, const UAbilitySystemComponent* /*Target*/, const FHitResult* /*Hit*/);
 
 
 /**
@@ -22,6 +30,9 @@ class ULyraDamageExecution : public UGameplayEffectExecutionCalculation
 public:
 
 	ULyraDamageExecution();
+
+	/** Rubezh: optional target-side damage multiplier (armor). Unbound means 1. */
+	static LYRAGAME_API FLyraIncomingDamageMultiplier& GetIncomingDamageMultiplier();
 
 protected:
 

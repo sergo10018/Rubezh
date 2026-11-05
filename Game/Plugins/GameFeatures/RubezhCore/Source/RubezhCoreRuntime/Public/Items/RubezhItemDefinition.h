@@ -4,6 +4,7 @@
 
 #include "Engine/DataTable.h"
 #include "Health/RubezhInjury.h"
+#include "Items/RubezhEquipSlot.h"
 #include "Items/RubezhItemCategory.h"
 
 #include "RubezhItemDefinition.generated.h"
@@ -65,6 +66,35 @@ struct RUBEZHCORERUNTIME_API FRubezhItemDefinition : public FTableRowBase
 	// На сколько секунд снимает боль.
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rubezh|Item|Medical", Meta = (ClampMin = 0))
 	float PainReliefSeconds = 0.0f;
+
+	// --- Снаряжение (броня, одежда, рюкзаки; у остальных None и нули) ---
+
+	// Куда надевается.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rubezh|Item|Equipment")
+	ERubezhEquipSlot EquipSlot = ERubezhEquipSlot::None;
+
+	// На сколько процентов снижает урон от попаданий в закрытые части тела.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rubezh|Item|Equipment", Meta = (ClampMin = 0, ClampMax = 95))
+	float Protection = 0.0f;
+
+	// На сколько процентов снижает шанс кровотечения от попадания в закрытые части тела.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rubezh|Item|Equipment", Meta = (ClampMin = 0, ClampMax = 100))
+	float BleedProtection = 0.0f;
+
+	// Утепление (пока ни на что не влияет — пригодится, когда появится климат).
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rubezh|Item|Equipment", Meta = (ClampMin = 0))
+	float Warmth = 0.0f;
+
+	// Рюкзак: размер сетки в клетках.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rubezh|Item|Equipment", Meta = (ClampMin = 0))
+	int32 BackpackWidth = 0;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rubezh|Item|Equipment", Meta = (ClampMin = 0))
+	int32 BackpackHeight = 0;
+
+	// Рюкзак: прибавка к лимиту переносимого веса, кг (хорошая подвесная система — меньше устаёшь).
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rubezh|Item|Equipment", Meta = (ClampMin = 0))
+	float CarryBonusKg = 0.0f;
 
 	FIntPoint GetFootprint(bool bRotated) const
 	{

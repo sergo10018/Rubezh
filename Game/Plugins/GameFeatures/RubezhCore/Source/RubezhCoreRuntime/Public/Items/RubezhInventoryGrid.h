@@ -64,6 +64,15 @@ struct RUBEZHCORERUNTIME_API FRubezhInventoryGrid
 	/** Переложить стопку на новое место (с поворотом или без). false — место занято или вне сетки. */
 	bool MoveEntry(int32 EntryIndex, FIntPoint NewPosition, bool bRotated, FRubezhItemLookup Lookup);
 
+	/** Положить стопку в указанное место (например, снятую куртку). false — место занято или вне сетки. */
+	bool AddEntryAt(FName ItemId, int32 Count, FIntPoint Position, bool bRotated, FRubezhItemLookup Lookup);
+
+	/**
+	 * Поменять размер сетки (сменили рюкзак). Вещи, которые помещаются на своих местах, остаются там,
+	 * остальные раскладываются заново. false — всё не влезет; тогда сетка не меняется.
+	 */
+	bool Resize(FIntPoint NewSize, FRubezhItemLookup Lookup);
+
 	int32 CountItem(FName ItemId) const;
 
 	/** Вес всего содержимого, кг. Неизвестные предметы не учитываются. */
