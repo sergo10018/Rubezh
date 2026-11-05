@@ -51,7 +51,8 @@ MMO-lite онлайн-шутер с выживанием, экономикой �
 ## Что уже сделано в коде (RubezhCore)
 - `URubezhSurvivalSet` — выносливость и вес (GAS), выдаётся игроку через `AbilitySet_RubezhSurvival` → `HeroData_Rubezh` (свои данные персонажа, копия `HeroData_ShooterGame`) → режим `B_Rubezh_Proto`.
 - `Rubezh::Encumbrance` — уровни перегруза; `ERubezhItemCategory` + `Rubezh::Items::IsLostOnDeath`; `URubezhCombatLogoutSubsystem` — запрет выхода 15 с после урона (только сервер).
-- Ещё не связано с игрой: вес не замедляет движение, бег не тратит выносливость, выхода из игры нет.
+- Спринт `URubezhGameplayAbility_Sprint` на Shift (`InputTag.Ability.Dash`): ×1.5 скорости, тратит выносливость (`URubezhGE_SprintStaminaDrain`), не стартует ниже 15 ед. и при перегрузе; восстановление — `URubezhGE_StaminaRegen`. Числа — `Survival/RubezhStaminaRules.h`. Рывок Lyra убран: наш набор `AbilitySet_RubezhHero` = копия `AbilitySet_ShooterHero` без `GA_Hero_Dash`; у `IA_Ability_Dash` снят триггер Pressed (иначе «отпускание» приходит сразу).
+- Ещё не связано с игрой: вес не замедляет движение (нет инвентаря с весом), выхода из игры нет.
 
 ## Командная работа (2+ человека, у каждого свой Claude)
 - Перед работой — `git pull`; после каждого законченного куска — коммит и `git push` маленькими порциями.

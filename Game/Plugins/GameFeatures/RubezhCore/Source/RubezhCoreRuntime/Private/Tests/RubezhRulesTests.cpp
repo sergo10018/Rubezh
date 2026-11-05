@@ -4,6 +4,7 @@
 #include "Items/RubezhItemCategory.h"
 #include "Misc/AutomationTest.h"
 #include "Survival/RubezhEncumbrance.h"
+#include "Survival/RubezhStaminaRules.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
 
@@ -83,6 +84,28 @@ bool FRubezhCombatLogoutLockTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("Через 10 с осталось 5 с"), GetRemainingLogoutLock(110.0, 100.0), 5.0);
 	TestEqual(TEXT("Ровно через 15 с выйти можно"), GetRemainingLogoutLock(115.0, 100.0), 0.0);
 	TestEqual(TEXT("Позже 15 с — без запрета"), GetRemainingLogoutLock(200.0, 100.0), 0.0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRubezhSprintStaminaTest, "Rubezh.Survival.Stamina.Sprint", RubezhTestFlags)
+
+bool FRubezhSprintStaminaTest::RunTest(const FString& Parameters)
+{
+	using namespace Rubezh::Stamina;
+
+	TestTrue(TEXT("Полный запас — бежать можно"), CanStartSprint(100.0f, ERubezhEncumbranceLevel::Normal));
+	TestTrue(TEXT("Ровно порог — бежать можно"), CanStartSprint(MinStaminaToStartSprint, ERubezhEncumbranceLevel::Normal));
+	TestFalse(TEXT("Ниже порога — сначала отдышаться"), CanStartSprint(MinStaminaToStartSprint - 0.1f, ERubezhEncumbranceLevel::Normal));
+	TestTrue(TEXT("Нагружен — бежать можно"), CanStartSprint(100.0f, ERubezhEncumbranceLevel::Burdened));
+	TestFalse(TEXT("Перегруз — бег запрещён"), CanStartSprint(100.0f, ERubezhEncumbranceLevel::Overloaded));
+	TestFalse(TEXT("Неподъёмно — бег запрещён"), CanStartSprint(100.0f, ERubezhEncumbranceLevel::Immobile));
+
+	TestEqual(TEXT("Итоговая трата без нагрузки"), GetSprintNetDrainPerSecond(ERubezhEncumbranceLevel::Normal), SprintNetDrainPerSecond);
+	TestEqual(TEXT("Нагружен — трата ×1.3"), GetSprintNetDrainPerSecond(ERubezhEncumbranceLevel::Burdened), SprintNetDrainPerSecond * 1.3f);
+
+	// Восстановление идёт и во время спринта, поэтому за секунду расход + восстановление дают итоговую трату.
+	const float NetPerSecond = GetSprintDrainPerTick(ERubezhEncumbranceLevel::Normal) / TickPeriod + RegenPerSecond;
+	TestEqual(TEXT("Расход за период компенсирует восстановление"), NetPerSecond, -SprintNetDrainPerSecond, 0.001f);
 	return true;
 }
 
