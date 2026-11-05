@@ -7,21 +7,24 @@
 #include "Engine/StaticMesh.h"
 #include "Engine/World.h"
 #include "GameFramework/Pawn.h"
+#include "Items/RubezhItemCatalog.h"
 #include "Items/RubezhItemDefinition.h"
 #include "Items/RubezhPickupRules.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Net/UnrealNetwork.h"
 #include "RubezhCoreRuntimeModule.h"
-#include "RubezhSettings.h"
 #include "UObject/ConstructorHelpers.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(RubezhWorldItem)
 
 namespace
 {
-	// Временный вид: одна клетка сетки рюкзака = 12 см коробки.
-	constexpr float CellSizeCm = 12.0f;
-	constexpr float BoxHeightCm = 8.0f;
+	// Временный вид: коробка тем больше, чем тяжелее предмет (1 кг — около 22 см в длину).
+	constexpr float BoxEdgePerCubeRootKgCm = 22.0f;
+	constexpr float MinBoxEdgeCm = 8.0f;
+	constexpr float MaxBoxEdgeCm = 60.0f;
+	constexpr float BoxWidthRatio = 0.6f;
+	constexpr float BoxHeightRatio = 0.4f;
 	constexpr float EngineCubeSizeCm = 100.0f;
 
 	// Насколько выше и ниже точки перед персонажем искать землю, когда предмет выбрасывают.
@@ -71,27 +74,42 @@ ARubezhWorldItem::ARubezhWorldItem(const FObjectInitializer& ObjectInitializer)
 	Mesh->SetCanEverAffectNavigation(false);
 }
 
-ARubezhWorldItem* ARubezhWorldItem::SpawnInFrontOf(APawn& Pawn, FName ItemId, int32 Count)
+FVector ARubezhWorldItem::FindGround(UWorld& World, const FVector& Point, const AActor* Ignore)
 {
-	UWorld* World = Pawn.GetWorld();
-	if (!World || !Pawn.HasAuthority() || Count <= 0)
-	{
-		return nullptr;
-	}
+	FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(RubezhFindGround), false, Ignore);
+	FHitResult Ground;
+	const bool bFoundGround = World.LineTraceSingleByChannel(Ground,
+		Point + FVector(0.0f, 0.0f, GroundSearchUpCm), Point - FVector(0.0f, 0.0f, GroundSearchDownCm), ECC_Visibility, QueryParams);
+	return bFoundGround ? Ground.ImpactPoint : Point;
+}
 
+FVector ARubezhWorldItem::FindDropLocation(const APawn& Pawn)
+{
 	// Небольшой разброс, чтобы несколько выброшенных вещей не легли в одну точку.
 	const FVector Scatter(FMath::FRandRange(-DropScatterCm, DropScatterCm), FMath::FRandRange(-DropScatterCm, DropScatterCm), 0.0f);
 	const FVector Forward = Pawn.GetActorForwardVector().GetSafeNormal2D();
 	const FVector Above = Pawn.GetActorLocation() + Forward * Rubezh::Pickup::DropForwardCm + Scatter;
+	return FindGround(*Pawn.GetWorld(), Above, &Pawn);
+}
 
-	FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(RubezhDropItem), false, &Pawn);
-	FHitResult Ground;
-	const bool bFoundGround = World->LineTraceSingleByChannel(Ground,
-		Above + FVector(0.0f, 0.0f, GroundSearchUpCm), Above - FVector(0.0f, 0.0f, GroundSearchDownCm), ECC_Visibility, QueryParams);
-	const FVector Location = bFoundGround ? Ground.ImpactPoint : Above;
+ARubezhWorldItem* ARubezhWorldItem::SpawnInFrontOf(APawn& Pawn, FName ItemId, int32 Count)
+{
+	UWorld* World = Pawn.GetWorld();
+	if (!World || !Pawn.HasAuthority())
+	{
+		return nullptr;
+	}
+	return SpawnAt(*World, FTransform(FRotator(0.0f, Pawn.GetActorRotation().Yaw, 0.0f), FindDropLocation(Pawn)), ItemId, Count);
+}
 
-	const FTransform Transform(FRotator(0.0f, Pawn.GetActorRotation().Yaw, 0.0f), Location);
-	ARubezhWorldItem* Item = World->SpawnActorDeferred<ARubezhWorldItem>(StaticClass(), Transform, nullptr, nullptr,
+ARubezhWorldItem* ARubezhWorldItem::SpawnAt(UWorld& World, const FTransform& Transform, FName ItemId, int32 Count)
+{
+	if (World.GetNetMode() == NM_Client || Count <= 0)
+	{
+		return nullptr;
+	}
+
+	ARubezhWorldItem* Item = World.SpawnActorDeferred<ARubezhWorldItem>(StaticClass(), Transform, nullptr, nullptr,
 		ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
 	if (!Item)
 	{
@@ -128,8 +146,7 @@ FVector ARubezhWorldItem::GetFocusLocation() const
 
 const FRubezhItemDefinition* ARubezhWorldItem::FindDefinition() const
 {
-	const UDataTable* Table = GetDefault<URubezhSettings>()->ItemTable.LoadSynchronous();
-	return Table ? Table->FindRow<FRubezhItemDefinition>(ItemId, TEXT("RubezhWorldItem"), false) : nullptr;
+	return Rubezh::Items::FindDefinition(ItemId);
 }
 
 void ARubezhWorldItem::OnConstruction(const FTransform& Transform)
@@ -154,12 +171,13 @@ void ARubezhWorldItem::OnRep_Item()
 void ARubezhWorldItem::UpdateVisual()
 {
 	const FRubezhItemDefinition* Definition = FindDefinition();
-	const FIntPoint Footprint = Definition ? Definition->GetFootprint(false) : FIntPoint(1, 1);
+	const float WeightKg = Definition ? Definition->WeightKg : 0.0f;
+	const float Edge = FMath::Clamp(BoxEdgePerCubeRootKgCm * FMath::Pow(FMath::Max(WeightKg, 0.0f), 1.0f / 3.0f), MinBoxEdgeCm, MaxBoxEdgeCm);
 
 	// Куб движка — 100 см с центром посередине; поднимаем его на полвысоты, чтобы он лежал на земле, а не тонул в ней.
-	const FVector BoxSize(Footprint.X * CellSizeCm, Footprint.Y * CellSizeCm, BoxHeightCm);
+	const FVector BoxSize(Edge, FMath::Max(Edge * BoxWidthRatio, MinBoxEdgeCm), FMath::Max(Edge * BoxHeightRatio, MinBoxEdgeCm * 0.5f));
 	Mesh->SetRelativeScale3D(BoxSize / EngineCubeSizeCm);
-	Mesh->SetRelativeLocation(FVector(0.0f, 0.0f, BoxHeightCm * 0.5f));
+	Mesh->SetRelativeLocation(FVector(0.0f, 0.0f, BoxSize.Z * 0.5f));
 
 	if (!Definition)
 	{

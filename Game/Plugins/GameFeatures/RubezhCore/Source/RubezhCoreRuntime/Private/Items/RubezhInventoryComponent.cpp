@@ -4,7 +4,9 @@
 
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemGlobals.h"
+#include "Character/LyraHealthComponent.h"
 #include "Engine/DataTable.h"
+#include "Items/RubezhLootContainer.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/Controller.h"
 #include "Items/RubezhWorldItem.h"
@@ -51,9 +53,13 @@ void URubezhInventoryComponent::GetLifetimeReplicatedProps(TArray<FLifetimePrope
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-	// Содержимое чужого рюкзака — тайна: видит только владелец (и тот, кто обыщет тело — позже).
+	// Содержимое чужого рюкзака — тайна: видит только владелец. Тело обыскивают через ARubezhLootContainer.
 	DOREPLIFETIME_CONDITION(URubezhInventoryComponent, Grid, COND_OwnerOnly);
 	DOREPLIFETIME_CONDITION(URubezhInventoryComponent, Equipped, COND_OwnerOnly);
+	DOREPLIFETIME_CONDITION(URubezhInventoryComponent, LootContainer, COND_OwnerOnly);
+	DOREPLIFETIME_CONDITION(URubezhInventoryComponent, LootGrid, COND_OwnerOnly);
+	DOREPLIFETIME_CONDITION(URubezhInventoryComponent, SearchingContainer, COND_OwnerOnly);
+	DOREPLIFETIME_CONDITION(URubezhInventoryComponent, SearchFinishTime, COND_OwnerOnly);
 }
 
 void URubezhInventoryComponent::BeginPlay()
@@ -70,7 +76,7 @@ void URubezhInventoryComponent::BeginPlay()
 	if (GetOwner()->HasAuthority())
 	{
 		Equipped.SetNum(Rubezh::Equipment::SlotCount);
-		Grid = FRubezhInventoryGrid(Settings->PocketsSize);
+		Grid = FRubezhInventoryGrid(Settings->PocketSlots);
 		ApplyStartingEquipment();
 	}
 
@@ -95,6 +101,15 @@ void URubezhInventoryComponent::EndPlay(const EEndPlayReason::Type EndPlayReason
 	{
 		PlayerState->OnPawnSet.RemoveDynamic(this, &ThisClass::OnPawnSet);
 	}
+	if (ULyraHealthComponent* Health = BoundHealth.Get())
+	{
+		Health->OnDeathStarted.RemoveDynamic(this, &ThisClass::OnOwnerDeathStarted);
+	}
+	if (GetOwner()->HasAuthority())
+	{
+		CloseLoot();
+		CancelSearch();
+	}
 	GetWorld()->GetTimerManager().ClearTimer(WeightSyncTimer);
 
 	Super::EndPlay(EndPlayReason);
@@ -104,9 +119,25 @@ void URubezhInventoryComponent::OnPawnSet(APlayerState* Player, APawn* NewPawn, 
 {
 	RefreshOwnerWalkSpeed();
 
+	if (!GetOwner()->HasAuthority())
+	{
+		return;
+	}
+
+	// Смерть персонажа — сигнал выложить на землю то, что теряется.
+	if (ULyraHealthComponent* OldHealth = BoundHealth.Get())
+	{
+		OldHealth->OnDeathStarted.RemoveDynamic(this, &ThisClass::OnOwnerDeathStarted);
+	}
+	BoundHealth = ULyraHealthComponent::FindHealthComponent(NewPawn);
+	if (ULyraHealthComponent* NewHealth = BoundHealth.Get())
+	{
+		NewHealth->OnDeathStarted.AddUniqueDynamic(this, &ThisClass::OnOwnerDeathStarted);
+	}
+
 	// Атрибуты веса появляются на ASC чуть позже персонажа (их выдаёт набор способностей героя) —
 	// ждём их и выставляем вес и лимит с учётом рюкзака.
-	if (GetOwner()->HasAuthority() && NewPawn)
+	if (NewPawn)
 	{
 		GetWorld()->GetTimerManager().SetTimer(WeightSyncTimer, this, &ThisClass::TrySyncWeightAttributes, WeightSyncIntervalSeconds, true);
 	}
@@ -140,9 +171,15 @@ const FRubezhItemDefinition* URubezhInventoryComponent::FindDefinition(FName Ite
 	return ItemTable ? ItemTable->FindRow<FRubezhItemDefinition>(ItemId, TEXT("RubezhInventory"), false) : nullptr;
 }
 
-FIntPoint URubezhInventoryComponent::GetPocketsSize()
+int32 URubezhInventoryComponent::GetPocketSlots()
 {
-	return GetDefault<URubezhSettings>()->PocketsSize;
+	return GetDefault<URubezhSettings>()->PocketSlots;
+}
+
+APawn* URubezhInventoryComponent::GetOwnerPawn() const
+{
+	const APlayerState* PlayerState = Cast<APlayerState>(GetOwner());
+	return PlayerState ? PlayerState->GetPawn() : nullptr;
 }
 
 void URubezhInventoryComponent::ApplyStartingEquipment()
@@ -159,8 +196,8 @@ void URubezhInventoryComponent::ApplyStartingEquipment()
 		}
 		Equipped[SlotIndex] = ItemId;
 	}
-	// Сетка пока пустая — просто берём размер надетого рюкзака.
-	Grid = FRubezhInventoryGrid(Rubezh::Equipment::GetGridSize(Equipped, Lookup, GetPocketsSize()));
+	// Рюкзак пока пустой — просто берём число ячеек надетого рюкзака.
+	Grid = FRubezhInventoryGrid(Rubezh::Equipment::GetSlotCount(Equipped, Lookup, GetPocketSlots()));
 	HandleGridChanged();
 }
 
@@ -196,7 +233,7 @@ void URubezhInventoryComponent::LogEquipFailure(Rubezh::Equipment::EResult Resul
 
 void URubezhInventoryComponent::ServerEquipEntry_Implementation(int32 EntryIndex)
 {
-	const Rubezh::Equipment::EResult Result = Rubezh::Equipment::Equip(Grid, Equipped, EntryIndex, [this](FName Id) { return FindDefinition(Id); }, GetPocketsSize());
+	const Rubezh::Equipment::EResult Result = Rubezh::Equipment::Equip(Grid, Equipped, EntryIndex, [this](FName Id) { return FindDefinition(Id); }, GetPocketSlots());
 	LogEquipFailure(Result);
 	if (Result == Rubezh::Equipment::EResult::Ok)
 	{
@@ -204,10 +241,10 @@ void URubezhInventoryComponent::ServerEquipEntry_Implementation(int32 EntryIndex
 	}
 }
 
-void URubezhInventoryComponent::ServerUnequip_Implementation(ERubezhEquipSlot Slot, FIntPoint Position, bool bRotated, bool bAutoPlace)
+void URubezhInventoryComponent::ServerUnequip_Implementation(ERubezhEquipSlot Slot, int32 TargetSlot)
 {
-	const TOptional<FIntPoint> Target = bAutoPlace ? TOptional<FIntPoint>() : TOptional<FIntPoint>(Position);
-	const Rubezh::Equipment::EResult Result = Rubezh::Equipment::Unequip(Grid, Equipped, Slot, Target, bRotated, [this](FName Id) { return FindDefinition(Id); }, GetPocketsSize());
+	const TOptional<int32> Target = TargetSlot == INDEX_NONE ? TOptional<int32>() : TOptional<int32>(TargetSlot);
+	const Rubezh::Equipment::EResult Result = Rubezh::Equipment::Unequip(Grid, Equipped, Slot, Target, [this](FName Id) { return FindDefinition(Id); }, GetPocketSlots());
 	LogEquipFailure(Result);
 	if (Result == Rubezh::Equipment::EResult::Ok)
 	{
@@ -217,10 +254,31 @@ void URubezhInventoryComponent::ServerUnequip_Implementation(ERubezhEquipSlot Sl
 
 void URubezhInventoryComponent::ServerDropEquipped_Implementation(ERubezhEquipSlot Slot)
 {
-	const APlayerState* PlayerState = Cast<APlayerState>(GetOwner());
-	APawn* Pawn = PlayerState ? PlayerState->GetPawn() : nullptr;
+	APawn* Pawn = GetOwnerPawn();
 	if (!Pawn)
 	{
+		return;
+	}
+
+	// Рюкзак с вещами падает вместе с ними: его можно обыскать или надеть обратно.
+	if (Slot == ERubezhEquipSlot::Backpack && !Grid.IsEmpty())
+	{
+		FRubezhInventoryGrid NewGrid = Grid;
+		Rubezh::Equipment::FEquipped NewEquipped = Equipped;
+		FName BagId;
+		FRubezhInventoryGrid BagContents;
+		const Rubezh::Equipment::EResult Result = Rubezh::Equipment::DropBag(NewGrid, NewEquipped, GetPocketSlots(), BagId, BagContents);
+		const FRubezhItemDefinition* Bag = FindDefinition(BagId);
+		LogEquipFailure(Result);
+		if (Result != Rubezh::Equipment::EResult::Ok || !Bag || !ARubezhLootContainer::SpawnDropped(*GetWorld(),
+			ARubezhWorldItem::FindDropLocation(*Pawn), Pawn->GetActorRotation().Yaw, Bag->DisplayName, BagContents, BagId, 0.0f))
+		{
+			return;
+		}
+
+		Grid = MoveTemp(NewGrid);
+		Equipped = MoveTemp(NewEquipped);
+		HandleGridChanged();
 		return;
 	}
 
@@ -228,7 +286,7 @@ void URubezhInventoryComponent::ServerDropEquipped_Implementation(ERubezhEquipSl
 	FRubezhInventoryGrid NewGrid = Grid;
 	Rubezh::Equipment::FEquipped NewEquipped = Equipped;
 	FName ItemId;
-	const Rubezh::Equipment::EResult Result = Rubezh::Equipment::TakeOff(NewGrid, NewEquipped, Slot, [this](FName Id) { return FindDefinition(Id); }, GetPocketsSize(), ItemId);
+	const Rubezh::Equipment::EResult Result = Rubezh::Equipment::TakeOff(NewGrid, NewEquipped, Slot, [this](FName Id) { return FindDefinition(Id); }, GetPocketSlots(), ItemId);
 	LogEquipFailure(Result);
 	if (Result != Rubezh::Equipment::EResult::Ok || !ARubezhWorldItem::SpawnInFrontOf(*Pawn, ItemId, 1))
 	{
@@ -254,7 +312,7 @@ int32 URubezhInventoryComponent::AddItem(FName ItemId, int32 Count)
 		return Count;
 	}
 
-	const int32 NotAdded = Grid.AddItem(ItemId, *Definition, Count, [this](FName Id) { return FindDefinition(Id); });
+	const int32 NotAdded = Grid.AddItem(ItemId, *Definition, Count);
 	if (NotAdded < Count)
 	{
 		HandleGridChanged();
@@ -277,10 +335,10 @@ int32 URubezhInventoryComponent::RemoveItem(FName ItemId, int32 Count)
 	return Removed;
 }
 
-void URubezhInventoryComponent::ServerMoveEntry_Implementation(int32 EntryIndex, FIntPoint NewPosition, bool bRotated)
+void URubezhInventoryComponent::ServerMoveEntry_Implementation(int32 EntryIndex, int32 NewSlot)
 {
-	// Сетка сама проверяет индекс, границы и пересечения — недопустимый запрос просто ничего не меняет.
-	if (Grid.MoveEntry(EntryIndex, NewPosition, bRotated, [this](FName Id) { return FindDefinition(Id); }))
+	// Рюкзак сам проверяет индекс и номер ячейки — недопустимый запрос просто ничего не меняет.
+	if (Grid.MoveEntry(EntryIndex, NewSlot, [this](FName Id) { return FindDefinition(Id); }))
 	{
 		HandleGridChanged();
 	}
@@ -288,8 +346,7 @@ void URubezhInventoryComponent::ServerMoveEntry_Implementation(int32 EntryIndex,
 
 void URubezhInventoryComponent::ServerDropEntry_Implementation(int32 EntryIndex)
 {
-	const APlayerState* PlayerState = Cast<APlayerState>(GetOwner());
-	APawn* Pawn = PlayerState ? PlayerState->GetPawn() : nullptr;
+	APawn* Pawn = GetOwnerPawn();
 	if (!Pawn || !Grid.GetEntries().IsValidIndex(EntryIndex))
 	{
 		return;
@@ -316,6 +373,21 @@ float URubezhInventoryComponent::GetTotalWeight() const
 void URubezhInventoryComponent::OnRep_Grid()
 {
 	OnInventoryChanged.Broadcast();
+}
+
+void URubezhInventoryComponent::OnOwnerDeathStarted(AActor* OwningActor)
+{
+	if (!GetOwner()->HasAuthority())
+	{
+		return;
+	}
+
+	CloseLoot();
+	CancelSearch();
+	if (const APawn* Pawn = Cast<APawn>(OwningActor))
+	{
+		DropBodyOnDeath(*Pawn);
+	}
 }
 
 void URubezhInventoryComponent::HandleGridChanged()

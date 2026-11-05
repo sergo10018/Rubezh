@@ -69,9 +69,10 @@ void URubezhEquipmentSlotWidget::SetItem(FName InItemId, const FRubezhItemDefini
 	ResetHighlight();
 
 	const FString Tooltip = Item
-		? FString::Printf(TEXT("%s\n%s\n%.2f кг\nПеретащить в сетку или двойной клик — снять, за окно — бросить"),
-			*Item->DisplayName.ToString(), *Rubezh::Equipment::DescribeStats(*Item), Item->WeightKg)
-		: FString::Printf(TEXT("%s: пусто. Перетащите сюда предмет или дважды кликните его в сетке"), Rubezh::Equipment::GetSlotName(EquipSlot));
+		? FString::Printf(TEXT("%s\n%s\n%.2f кг\nПеретащить в рюкзак или двойной клик — снять, за окно — бросить%s"),
+			*Item->DisplayName.ToString(), *Rubezh::Equipment::DescribeStats(*Item), Item->WeightKg,
+			EquipSlot == ERubezhEquipSlot::Backpack ? TEXT(" (вместе с вещами)") : TEXT(""))
+		: FString::Printf(TEXT("%s: пусто. Перетащите сюда предмет или дважды кликните его в рюкзаке"), Rubezh::Equipment::GetSlotName(EquipSlot));
 	SetToolTipText(FText::FromString(Tooltip));
 }
 
@@ -94,7 +95,7 @@ FReply URubezhEquipmentSlotWidget::NativeOnMouseButtonDoubleClick(const FGeometr
 {
 	if (Window.IsValid() && !ItemId.IsNone() && InMouseEvent.GetEffectingButton() == EKeys::LeftMouseButton)
 	{
-		Window->RequestUnequip(EquipSlot, {}, false);
+		Window->RequestUnequip(EquipSlot, {});
 		return FReply::Handled();
 	}
 	return Super::NativeOnMouseButtonDoubleClick(InGeometry, InMouseEvent);
@@ -108,16 +109,14 @@ void URubezhEquipmentSlotWidget::NativeOnDragDetected(const FGeometry& InGeometr
 	Entry.ItemId = ItemId;
 	Entry.Count = 1;
 	URubezhInventoryItemWidget* DragVisual = CreateWidget<URubezhInventoryItemWidget>(GetOwningPlayer());
-	DragVisual->Setup(nullptr, INDEX_NONE, Entry, Definition);
+	DragVisual->Setup(nullptr, ERubezhItemSource::Equipment, INDEX_NONE, Entry, Definition);
 
-	// Держим предмет за середину левой верхней клетки — так видно, куда он ляжет в сетке.
 	URubezhInventoryDragOperation* Operation = NewObject<URubezhInventoryDragOperation>(this);
+	Operation->Source = ERubezhItemSource::Equipment;
 	Operation->FromSlot = EquipSlot;
-	Operation->Footprint = Definition.GetFootprint(false);
-	Operation->GrabOffset = FVector2D(CellSize * 0.5f, CellSize * 0.5f);
+	Operation->ItemId = ItemId;
 	Operation->DefaultDragVisual = DragVisual;
-	Operation->Pivot = EDragPivot::TopLeft;
-	Operation->Offset = FVector2D(-0.5f / FMath::Max(1, Operation->Footprint.X), -0.5f / FMath::Max(1, Operation->Footprint.Y));
+	Operation->Pivot = EDragPivot::CenterCenter;
 	OutOperation = Operation;
 
 	SetRenderOpacity(DraggedItemOpacity);
@@ -136,7 +135,7 @@ bool URubezhEquipmentSlotWidget::AcceptsDrag(const UDragDropOperation* Operation
 {
 	const URubezhInventoryDragOperation* Drag = Cast<URubezhInventoryDragOperation>(Operation);
 	const FRubezhItemDefinition* Item = (Drag && Window.IsValid()) ? Window->FindEntryDefinition(Drag->EntryIndex) : nullptr;
-	return Drag && Drag->FromSlot == ERubezhEquipSlot::None && Item && Item->EquipSlot == EquipSlot;
+	return Drag && Drag->Source == ERubezhItemSource::Backpack && Item && Item->EquipSlot == EquipSlot;
 }
 
 bool URubezhEquipmentSlotWidget::NativeOnDragOver(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation)
@@ -151,7 +150,7 @@ bool URubezhEquipmentSlotWidget::NativeOnDragOver(const FGeometry& InGeometry, c
 	{
 		Window->HideDropPreview();
 	}
-	if (Drag->FromSlot == ERubezhEquipSlot::None)
+	if (Drag->Source != ERubezhItemSource::Equipment)
 	{
 		Frame->SetBrushColor(AcceptsDrag(InOperation) ? DropAllowed : DropBlocked);
 	}

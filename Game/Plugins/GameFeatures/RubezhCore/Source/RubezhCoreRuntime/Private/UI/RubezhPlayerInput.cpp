@@ -113,6 +113,15 @@ void URubezhPlayerInput::ToggleInventory(APlayerController* PlayerController)
 		Window->DeactivateWidget();
 		return;
 	}
+	OpenInventory(PlayerController);
+}
+
+void URubezhPlayerInput::OpenInventory(APlayerController* PlayerController)
+{
+	if (const URubezhInventoryWindow* Window = OpenWindow.Get(); Window && Window->IsActivated())
+	{
+		return;
+	}
 
 	const ULocalPlayer* LocalPlayer = PlayerController ? PlayerController->GetLocalPlayer() : nullptr;
 	if (!LocalPlayer)

@@ -7,7 +7,6 @@
 #include "Components/TextBlock.h"
 #include "Components/VerticalBox.h"
 #include "Components/VerticalBoxSlot.h"
-#include "RubezhSettings.h"
 #include "UI/RubezhInventoryStyle.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(RubezhPickupPrompt)
@@ -46,27 +45,11 @@ void URubezhPickupPrompt::NativeOnInitialized()
 	SetVisibility(ESlateVisibility::HitTestInvisible);
 }
 
-void URubezhPickupPrompt::SetContent(const FText& ItemName, int32 Count, int32 FittingCount)
+void URubezhPickupPrompt::SetMessage(const FText& Name, const FString& Action, bool bWarning)
 {
 	using namespace Rubezh::InventoryStyle;
 
-	const FString Name = Count > 1 ? FString::Printf(TEXT("%s ×%d"), *ItemName.ToString(), Count) : ItemName.ToString();
-	NameText->SetText(FText::FromString(Name));
-
-	const FString Key = GetDefault<URubezhSettings>()->InteractKey.GetDisplayName().ToString();
-	FString Action;
-	if (FittingCount <= 0)
-	{
-		Action = TEXT("Нет места в рюкзаке");
-	}
-	else if (FittingCount < Count)
-	{
-		Action = FString::Printf(TEXT("%s — подобрать %d (больше не влезет)"), *Key, FittingCount);
-	}
-	else
-	{
-		Action = FString::Printf(TEXT("%s — подобрать"), *Key);
-	}
+	NameText->SetText(Name);
 	ActionText->SetText(FText::FromString(Action));
-	ActionText->SetColorAndOpacity(FSlateColor(FittingCount > 0 ? HintText : WarningText));
+	ActionText->SetColorAndOpacity(FSlateColor(bWarning ? WarningText : HintText));
 }

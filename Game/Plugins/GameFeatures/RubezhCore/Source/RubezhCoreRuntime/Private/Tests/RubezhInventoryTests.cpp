@@ -10,23 +10,21 @@ namespace
 {
 	constexpr EAutomationTestFlags InventoryTestFlags = EAutomationTestFlags::EditorContext | EAutomationTestFlags::ServerContext | EAutomationTestFlags::EngineFilter;
 
-	FRubezhItemDefinition MakeDefinition(int32 Width, int32 Height, int32 MaxStack, float WeightKg, ERubezhItemCategory Category = ERubezhItemCategory::Junk)
+	FRubezhItemDefinition MakeDefinition(int32 MaxStack, float WeightKg, ERubezhItemCategory Category = ERubezhItemCategory::Junk)
 	{
 		FRubezhItemDefinition Definition;
-		Definition.Width = Width;
-		Definition.Height = Height;
 		Definition.MaxStack = MaxStack;
 		Definition.WeightKg = WeightKg;
 		Definition.Category = Category;
 		return Definition;
 	}
 
-	/** Маленький каталог для тестов: автомат 5×2, патроны 1×1 по 60, аккумулятор 2×2. */
+	/** Маленький каталог для тестов: автомат, патроны по 60 в стопке, аккумулятор. */
 	struct FTestCatalog
 	{
-		FRubezhItemDefinition Rifle = MakeDefinition(5, 2, 1, 3.6f, ERubezhItemCategory::Equipment);
-		FRubezhItemDefinition Ammo = MakeDefinition(1, 1, 60, 0.016f, ERubezhItemCategory::Consumable);
-		FRubezhItemDefinition Battery = MakeDefinition(2, 2, 1, 13.0f, ERubezhItemCategory::Valuable);
+		FRubezhItemDefinition Rifle = MakeDefinition(1, 3.6f, ERubezhItemCategory::Equipment);
+		FRubezhItemDefinition Ammo = MakeDefinition(60, 0.016f, ERubezhItemCategory::Consumable);
+		FRubezhItemDefinition Battery = MakeDefinition(1, 13.0f, ERubezhItemCategory::Valuable);
 
 		const FRubezhItemDefinition* Find(FName Id) const
 		{
@@ -43,21 +41,15 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRubezhInventoryPlacementTest, "Rubezh.Inventor
 bool FRubezhInventoryPlacementTest::RunTest(const FString& Parameters)
 {
 	const FTestCatalog Catalog;
-	auto Lookup = [&Catalog](FName Id) { return Catalog.Find(Id); };
 
-	FRubezhInventoryGrid Grid(FIntPoint(6, 8));
-	TestEqual(TEXT("Автомат влез целиком"), Grid.AddItem(TEXT("rifle"), Catalog.Rifle, 1, Lookup), 0);
-	TestEqual(TEXT("Автомат лёг в левый верхний угол"), Grid.GetEntries()[0].Position, FIntPoint(0, 0));
-	TestFalse(TEXT("Автомат не повёрнут"), Grid.GetEntries()[0].bRotated);
-
-	TestFalse(TEXT("Клетка под автоматом занята"), Grid.IsAreaFree(FIntPoint(4, 1), FIntPoint(1, 1), Lookup));
-	TestTrue(TEXT("Клетка справа от автомата свободна"), Grid.IsAreaFree(FIntPoint(5, 0), FIntPoint(1, 1), Lookup));
-	TestFalse(TEXT("Область за краем сетки недоступна"), Grid.IsAreaFree(FIntPoint(5, 7), FIntPoint(2, 1), Lookup));
-
-	// Сетка 2×6: автомат 5×2 влезает только повёрнутым (2×5).
-	FRubezhInventoryGrid Narrow(FIntPoint(2, 6));
-	TestEqual(TEXT("В узкую сетку автомат влезает"), Narrow.AddItem(TEXT("rifle"), Catalog.Rifle, 1, Lookup), 0);
-	TestTrue(TEXT("…повёрнутым"), Narrow.GetEntries()[0].bRotated);
+	FRubezhInventoryGrid Grid(4);
+	TestEqual(TEXT("Автомат влез"), Grid.AddItem(TEXT("rifle"), Catalog.Rifle, 1), 0);
+	TestEqual(TEXT("…в первую ячейку"), Grid.GetEntries()[0].Slot, 0);
+	TestEqual(TEXT("Ещё три автомата влезли — каждый в свою ячейку"), Grid.AddItem(TEXT("rifle"), Catalog.Rifle, 3), 0);
+	TestEqual(TEXT("Заняты все 4 ячейки"), Grid.GetEntries().Num(), 4);
+	TestEqual(TEXT("Пятый не влез"), Grid.AddItem(TEXT("rifle"), Catalog.Rifle, 1), 1);
+	TestEqual(TEXT("Свободных ячеек нет"), Grid.FindFreeSlot(), static_cast<int32>(INDEX_NONE));
+	TestFalse(TEXT("Ячейка за пределами рюкзака недоступна"), Grid.IsSlotFree(4));
 	return true;
 }
 
@@ -66,22 +58,21 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRubezhInventoryStackingTest, "Rubezh.Inventory
 bool FRubezhInventoryStackingTest::RunTest(const FString& Parameters)
 {
 	const FTestCatalog Catalog;
-	auto Lookup = [&Catalog](FName Id) { return Catalog.Find(Id); };
 
-	FRubezhInventoryGrid Grid(FIntPoint(2, 1));
-	TestEqual(TEXT("40 патронов — одна стопка"), Grid.AddItem(TEXT("ammo"), Catalog.Ammo, 40, Lookup), 0);
-	TestEqual(TEXT("Ещё 50: 20 доложены в стопку, 30 — новая стопка"), Grid.AddItem(TEXT("ammo"), Catalog.Ammo, 50, Lookup), 0);
+	FRubezhInventoryGrid Grid(2);
+	TestEqual(TEXT("40 патронов — одна стопка"), Grid.AddItem(TEXT("ammo"), Catalog.Ammo, 40), 0);
+	TestEqual(TEXT("Ещё 50: 20 доложены в стопку, 30 — новая стопка"), Grid.AddItem(TEXT("ammo"), Catalog.Ammo, 50), 0);
 	TestEqual(TEXT("Две стопки"), Grid.GetEntries().Num(), 2);
 	TestEqual(TEXT("Всего 90 патронов"), Grid.CountItem(TEXT("ammo")), 90);
 
-	TestEqual(TEXT("Сетка 2×1 полна: из 100 влезло только 30"), Grid.AddItem(TEXT("ammo"), Catalog.Ammo, 100, Lookup), 70);
+	TestEqual(TEXT("2 ячейки полны: из 100 влезло только 30"), Grid.AddItem(TEXT("ammo"), Catalog.Ammo, 100), 70);
 	TestEqual(TEXT("Всего 120 патронов"), Grid.CountItem(TEXT("ammo")), 120);
 
 	TestEqual(TEXT("Убрали 70"), Grid.RemoveItem(TEXT("ammo"), 70), 70);
 	TestEqual(TEXT("Осталось 50"), Grid.CountItem(TEXT("ammo")), 50);
 	TestEqual(TEXT("Пустая стопка удалена"), Grid.GetEntries().Num(), 1);
 	TestEqual(TEXT("Нельзя убрать больше, чем есть"), Grid.RemoveItem(TEXT("ammo"), 500), 50);
-	TestEqual(TEXT("Сетка пуста"), Grid.GetEntries().Num(), 0);
+	TestTrue(TEXT("Рюкзак пуст"), Grid.IsEmpty());
 	return true;
 }
 
@@ -92,17 +83,26 @@ bool FRubezhInventoryMoveTest::RunTest(const FString& Parameters)
 	const FTestCatalog Catalog;
 	auto Lookup = [&Catalog](FName Id) { return Catalog.Find(Id); };
 
-	FRubezhInventoryGrid Grid(FIntPoint(6, 8));
-	Grid.AddItem(TEXT("battery"), Catalog.Battery, 1, Lookup);	// (0,0)–(1,1)
-	Grid.AddItem(TEXT("rifle"), Catalog.Rifle, 1, Lookup);		// (0,2)–(4,3)
+	FRubezhInventoryGrid Grid(6);
+	Grid.AddItem(TEXT("battery"), Catalog.Battery, 1);	// ячейка 0
+	Grid.AddItem(TEXT("rifle"), Catalog.Rifle, 1);		// ячейка 1
 
-	TestFalse(TEXT("Нельзя положить аккумулятор на автомат"), Grid.MoveEntry(0, FIntPoint(1, 2), false, Lookup));
-	TestTrue(TEXT("Можно переложить аккумулятор вниз"), Grid.MoveEntry(0, FIntPoint(0, 6), false, Lookup));
-	TestEqual(TEXT("Аккумулятор на новом месте"), Grid.GetEntries()[0].Position, FIntPoint(0, 6));
-	TestTrue(TEXT("Можно сдвинуть стопку на частично своё же место"), Grid.MoveEntry(0, FIntPoint(1, 6), false, Lookup));
-	TestTrue(TEXT("Автомат можно повернуть, если место есть"), Grid.MoveEntry(1, FIntPoint(4, 0), true, Lookup));
-	TestFalse(TEXT("Нельзя вынести стопку за сетку"), Grid.MoveEntry(1, FIntPoint(5, 0), true, Lookup));
-	TestFalse(TEXT("Несуществующая стопка"), Grid.MoveEntry(7, FIntPoint(0, 0), false, Lookup));
+	TestTrue(TEXT("Аккумулятор — в пустую ячейку 5"), Grid.MoveEntry(0, 5, Lookup));
+	TestEqual(TEXT("…он там"), Grid.GetEntries()[0].Slot, 5);
+	TestTrue(TEXT("Автомат на аккумулятор — меняются местами"), Grid.MoveEntry(1, 5, Lookup));
+	TestEqual(TEXT("…автомат в 5"), Grid.GetEntries()[1].Slot, 5);
+	TestEqual(TEXT("…аккумулятор в 1"), Grid.GetEntries()[0].Slot, 1);
+	TestFalse(TEXT("За пределы рюкзака нельзя"), Grid.MoveEntry(0, 6, Lookup));
+	TestFalse(TEXT("Несуществующая стопка"), Grid.MoveEntry(7, 0, Lookup));
+
+	// Патроны на патроны — докладываются в стопку.
+	FRubezhInventoryGrid Ammo(3);
+	Ammo.AddEntryAt(TEXT("ammo"), 50, 0, Lookup);
+	Ammo.AddEntryAt(TEXT("ammo"), 30, 2, Lookup);
+	TestTrue(TEXT("30 патронов на стопку из 50"), Ammo.MoveEntry(1, 0, Lookup));
+	TestEqual(TEXT("…в стопке 60 (больше нельзя)"), Ammo.GetEntries()[0].Count, 60);
+	TestEqual(TEXT("…20 остались на месте"), Ammo.GetEntries()[1].Count, 20);
+	TestEqual(TEXT("…в ячейке 2"), Ammo.GetEntries()[1].Slot, 2);
 	return true;
 }
 
@@ -111,11 +111,10 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRubezhInventoryRemoveEntryTest, "Rubezh.Invent
 bool FRubezhInventoryRemoveEntryTest::RunTest(const FString& Parameters)
 {
 	const FTestCatalog Catalog;
-	auto Lookup = [&Catalog](FName Id) { return Catalog.Find(Id); };
 
-	FRubezhInventoryGrid Grid(FIntPoint(6, 8));
-	Grid.AddItem(TEXT("ammo"), Catalog.Ammo, 90, Lookup);		// стопки 60 и 30
-	Grid.AddItem(TEXT("battery"), Catalog.Battery, 1, Lookup);
+	FRubezhInventoryGrid Grid(6);
+	Grid.AddItem(TEXT("ammo"), Catalog.Ammo, 90);		// стопки 60 и 30
+	Grid.AddItem(TEXT("battery"), Catalog.Battery, 1);
 
 	FRubezhInventoryEntry Removed;
 	TestTrue(TEXT("Вынули вторую стопку патронов"), Grid.RemoveEntry(1, Removed));
@@ -124,7 +123,26 @@ bool FRubezhInventoryRemoveEntryTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("Патронов осталось 60"), Grid.CountItem(TEXT("ammo")), 60);
 	TestEqual(TEXT("Аккумулятор на месте"), Grid.CountItem(TEXT("battery")), 1);
 	TestFalse(TEXT("Несуществующая стопка"), Grid.RemoveEntry(5, Removed));
-	TestTrue(TEXT("Место освободилось — туда снова можно положить"), Grid.IsAreaFree(FIntPoint(1, 0), FIntPoint(1, 1), Lookup));
+	TestTrue(TEXT("Ячейка освободилась"), Grid.IsSlotFree(1));
+	TestEqual(TEXT("…и её займёт следующий предмет"), Grid.FindFreeSlot(), 1);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRubezhInventoryResizeTest, "Rubezh.Inventory.Grid.Resize", InventoryTestFlags)
+
+bool FRubezhInventoryResizeTest::RunTest(const FString& Parameters)
+{
+	const FTestCatalog Catalog;
+	auto Lookup = [&Catalog](FName Id) { return Catalog.Find(Id); };
+
+	FRubezhInventoryGrid Grid(12);
+	Grid.AddEntryAt(TEXT("battery"), 1, 0, Lookup);
+	Grid.AddEntryAt(TEXT("rifle"), 1, 10, Lookup);
+	TestTrue(TEXT("Уменьшение до 4 ячеек удалось"), Grid.Resize(4));
+	TestEqual(TEXT("Аккумулятор остался в 0"), Grid.GetEntries()[0].Slot, 0);
+	TestEqual(TEXT("Автомат переехал в 1"), Grid.GetEntries()[1].Slot, 1);
+	TestFalse(TEXT("В 1 ячейку два предмета не влезут"), Grid.Resize(1));
+	TestEqual(TEXT("…и рюкзак остался на 4"), Grid.GetSlotCount(), 4);
 	return true;
 }
 
@@ -160,12 +178,12 @@ bool FRubezhInventoryWeightTest::RunTest(const FString& Parameters)
 	const FTestCatalog Catalog;
 	auto Lookup = [&Catalog](FName Id) { return Catalog.Find(Id); };
 
-	FRubezhInventoryGrid Grid(FIntPoint(6, 8));
+	FRubezhInventoryGrid Grid(12);
 	TestEqual(TEXT("Пустой рюкзак ничего не весит"), Grid.GetTotalWeight(Lookup), 0.0f);
 
-	Grid.AddItem(TEXT("rifle"), Catalog.Rifle, 1, Lookup);
-	Grid.AddItem(TEXT("ammo"), Catalog.Ammo, 120, Lookup);
-	Grid.AddItem(TEXT("battery"), Catalog.Battery, 1, Lookup);
+	Grid.AddItem(TEXT("rifle"), Catalog.Rifle, 1);
+	Grid.AddItem(TEXT("ammo"), Catalog.Ammo, 120);
+	Grid.AddItem(TEXT("battery"), Catalog.Battery, 1);
 	// 3.6 + 120 × 0.016 + 13 = 18.52 кг
 	TestEqual(TEXT("Вес автомата, 120 патронов и аккумулятора"), Grid.GetTotalWeight(Lookup), 18.52f, 0.001f);
 	return true;

@@ -28,14 +28,7 @@ struct RUBEZHCORERUNTIME_API FRubezhItemDefinition : public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rubezh|Item", Meta = (ClampMin = 0))
 	float WeightKg = 0.0f;
 
-	// Размер в клетках сетки (в неповёрнутом виде).
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rubezh|Item", Meta = (ClampMin = 1))
-	int32 Width = 1;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rubezh|Item", Meta = (ClampMin = 1))
-	int32 Height = 1;
-
-	// Сколько штук помещается в одну клетку-стопку.
+	// Сколько штук помещается в одну ячейку-стопку (любой предмет занимает одну ячейку).
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rubezh|Item", Meta = (ClampMin = 1))
 	int32 MaxStack = 1;
 
@@ -85,19 +78,11 @@ struct RUBEZHCORERUNTIME_API FRubezhItemDefinition : public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rubezh|Item|Equipment", Meta = (ClampMin = 0))
 	float Warmth = 0.0f;
 
-	// Рюкзак: размер сетки в клетках.
+	// Рюкзак: сколько в нём ячеек.
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rubezh|Item|Equipment", Meta = (ClampMin = 0))
-	int32 BackpackWidth = 0;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rubezh|Item|Equipment", Meta = (ClampMin = 0))
-	int32 BackpackHeight = 0;
+	int32 BackpackSlots = 0;
 
 	// Рюкзак: прибавка к лимиту переносимого веса, кг (хорошая подвесная система — меньше устаёшь).
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rubezh|Item|Equipment", Meta = (ClampMin = 0))
 	float CarryBonusKg = 0.0f;
-
-	FIntPoint GetFootprint(bool bRotated) const
-	{
-		return bRotated ? FIntPoint(Height, Width) : FIntPoint(Width, Height);
-	}
 };

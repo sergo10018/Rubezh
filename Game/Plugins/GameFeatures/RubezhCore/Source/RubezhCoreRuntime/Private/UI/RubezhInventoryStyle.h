@@ -10,6 +10,7 @@
 namespace Rubezh::InventoryStyle
 {
 	inline constexpr float CellSize = 72.0f;
+	inline constexpr int32 SlotColumns = 6;	// ячеек в ряду рюкзака и ящика
 	inline constexpr float CellGap = 2.0f;
 	inline constexpr float WindowPadding = 20.0f;
 	inline constexpr int32 TitleFontSize = 22;
@@ -34,6 +35,7 @@ namespace Rubezh::InventoryStyle
 	inline const FLinearColor DropBlocked(0.9f, 0.15f, 0.1f, 0.35f);
 	inline const FLinearColor HintText(0.6f, 0.6f, 0.55f, 1.0f);
 	inline const FLinearColor WarningText(0.9f, 0.3f, 0.2f, 1.0f);
+	inline const FLinearColor ButtonColor(0.12f, 0.12f, 0.1f, 1.0f);
 
 	// Подсказка подбора предмета с земли.
 	inline constexpr int32 PromptNameFontSize = 14;

@@ -4,69 +4,24 @@
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(RubezhInventoryGrid)
 
-namespace
+int32 FRubezhInventoryGrid::FindEntryAt(int32 Slot) const
 {
-	bool RectsOverlap(FIntPoint PosA, FIntPoint SizeA, FIntPoint PosB, FIntPoint SizeB)
-	{
-		return PosA.X < PosB.X + SizeB.X && PosB.X < PosA.X + SizeA.X
-			&& PosA.Y < PosB.Y + SizeB.Y && PosB.Y < PosA.Y + SizeA.Y;
-	}
+	return Entries.IndexOfByPredicate([Slot](const FRubezhInventoryEntry& Entry) { return Entry.Slot == Slot; });
 }
 
-FIntPoint FRubezhInventoryGrid::GetEntryFootprint(const FRubezhInventoryEntry& Entry, FRubezhItemLookup Lookup) const
+int32 FRubezhInventoryGrid::FindFreeSlot() const
 {
-	const FRubezhItemDefinition* Definition = Lookup(Entry.ItemId);
-	// Неизвестный предмет (удалён из таблицы) всё равно занимает клетку, чтобы не потерять его при сохранении.
-	return Definition ? Definition->GetFootprint(Entry.bRotated) : FIntPoint(1, 1);
-}
-
-bool FRubezhInventoryGrid::IsAreaFree(FIntPoint Position, FIntPoint Footprint, FRubezhItemLookup Lookup, int32 IgnoreIndex) const
-{
-	const bool bInside = Position.X >= 0 && Position.Y >= 0
-		&& Position.X + Footprint.X <= Size.X && Position.Y + Footprint.Y <= Size.Y;
-	if (!bInside)
+	for (int32 Slot = 0; Slot < SlotCount; ++Slot)
 	{
-		return false;
-	}
-
-	for (int32 Index = 0; Index < Entries.Num(); ++Index)
-	{
-		if (Index != IgnoreIndex && RectsOverlap(Position, Footprint, Entries[Index].Position, GetEntryFootprint(Entries[Index], Lookup)))
+		if (FindEntryAt(Slot) == INDEX_NONE)
 		{
-			return false;
+			return Slot;
 		}
 	}
-	return true;
+	return INDEX_NONE;
 }
 
-bool FRubezhInventoryGrid::FindFreeSpot(const FRubezhItemDefinition& Definition, FRubezhItemLookup Lookup, FIntPoint& OutPosition, bool& bOutRotated) const
-{
-	const bool bSquare = Definition.Width == Definition.Height;
-	for (const bool bRotated : { false, true })
-	{
-		if (bRotated && bSquare)
-		{
-			break;
-		}
-
-		const FIntPoint Footprint = Definition.GetFootprint(bRotated);
-		for (int32 Y = 0; Y + Footprint.Y <= Size.Y; ++Y)
-		{
-			for (int32 X = 0; X + Footprint.X <= Size.X; ++X)
-			{
-				if (IsAreaFree(FIntPoint(X, Y), Footprint, Lookup))
-				{
-					OutPosition = FIntPoint(X, Y);
-					bOutRotated = bRotated;
-					return true;
-				}
-			}
-		}
-	}
-	return false;
-}
-
-int32 FRubezhInventoryGrid::AddItem(FName ItemId, const FRubezhItemDefinition& Definition, int32 Count, FRubezhItemLookup Lookup)
+int32 FRubezhInventoryGrid::AddItem(FName ItemId, const FRubezhItemDefinition& Definition, int32 Count)
 {
 	int32 Remaining = FMath::Max(Count, 0);
 	const int32 MaxStack = FMath::Max(Definition.MaxStack, 1);
@@ -87,9 +42,8 @@ int32 FRubezhInventoryGrid::AddItem(FName ItemId, const FRubezhItemDefinition& D
 
 	while (Remaining > 0)
 	{
-		FIntPoint Position;
-		bool bRotated = false;
-		if (!FindFreeSpot(Definition, Lookup, Position, bRotated))
+		const int32 Slot = FindFreeSlot();
+		if (Slot == INDEX_NONE)
 		{
 			break;
 		}
@@ -97,8 +51,7 @@ int32 FRubezhInventoryGrid::AddItem(FName ItemId, const FRubezhItemDefinition& D
 		FRubezhInventoryEntry& Entry = Entries.AddDefaulted_GetRef();
 		Entry.ItemId = ItemId;
 		Entry.Count = FMath::Min(MaxStack, Remaining);
-		Entry.Position = Position;
-		Entry.bRotated = bRotated;
+		Entry.Slot = Slot;
 		Remaining -= Entry.Count;
 	}
 
@@ -139,30 +92,66 @@ bool FRubezhInventoryGrid::RemoveEntry(int32 EntryIndex, FRubezhInventoryEntry& 
 	return true;
 }
 
-bool FRubezhInventoryGrid::MoveEntry(int32 EntryIndex, FIntPoint NewPosition, bool bRotated, FRubezhItemLookup Lookup)
+int32 FRubezhInventoryGrid::AddToEntry(int32 EntryIndex, int32 Count, int32 MaxStack)
 {
-	if (!Entries.IsValidIndex(EntryIndex))
+	if (!Entries.IsValidIndex(EntryIndex) || Count <= 0)
+	{
+		return 0;
+	}
+
+	const int32 Added = FMath::Clamp(FMath::Max(MaxStack, 1) - Entries[EntryIndex].Count, 0, Count);
+	Entries[EntryIndex].Count += Added;
+	return Added;
+}
+
+bool FRubezhInventoryGrid::ReduceEntry(int32 EntryIndex, int32 Count)
+{
+	if (!Entries.IsValidIndex(EntryIndex) || Count < 0 || Entries[EntryIndex].Count < Count)
 	{
 		return false;
 	}
 
-	FRubezhInventoryEntry& Entry = Entries[EntryIndex];
-	const FRubezhItemDefinition* Definition = Lookup(Entry.ItemId);
-	const FIntPoint Footprint = Definition ? Definition->GetFootprint(bRotated) : FIntPoint(1, 1);
-	if (!IsAreaFree(NewPosition, Footprint, Lookup, EntryIndex))
+	Entries[EntryIndex].Count -= Count;
+	if (Entries[EntryIndex].Count == 0)
 	{
-		return false;
+		Entries.RemoveAt(EntryIndex);
 	}
-
-	Entry.Position = NewPosition;
-	Entry.bRotated = bRotated;
 	return true;
 }
 
-bool FRubezhInventoryGrid::AddEntryAt(FName ItemId, int32 Count, FIntPoint Position, bool bRotated, FRubezhItemLookup Lookup)
+bool FRubezhInventoryGrid::MoveEntry(int32 EntryIndex, int32 NewSlot, FRubezhItemLookup Lookup)
+{
+	if (!Entries.IsValidIndex(EntryIndex) || NewSlot < 0 || NewSlot >= SlotCount)
+	{
+		return false;
+	}
+
+	FRubezhInventoryEntry& Moved = Entries[EntryIndex];
+	const int32 TargetIndex = FindEntryAt(NewSlot);
+	if (TargetIndex == INDEX_NONE || TargetIndex == EntryIndex)
+	{
+		Moved.Slot = NewSlot;
+		return true;
+	}
+
+	FRubezhInventoryEntry& Target = Entries[TargetIndex];
+	const FRubezhItemDefinition* Definition = Lookup(Moved.ItemId);
+	const int32 MaxStack = Definition ? FMath::Max(Definition->MaxStack, 1) : 1;
+	if (Target.ItemId == Moved.ItemId && Target.Count < MaxStack)
+	{
+		return ReduceEntry(EntryIndex, AddToEntry(TargetIndex, Moved.Count, MaxStack));
+	}
+
+	// Разные предметы (или полная стопка) — меняем местами.
+	Target.Slot = Moved.Slot;
+	Moved.Slot = NewSlot;
+	return true;
+}
+
+bool FRubezhInventoryGrid::AddEntryAt(FName ItemId, int32 Count, int32 Slot, FRubezhItemLookup Lookup)
 {
 	const FRubezhItemDefinition* Definition = Lookup(ItemId);
-	if (!Definition || Count <= 0 || Count > FMath::Max(Definition->MaxStack, 1) || !IsAreaFree(Position, Definition->GetFootprint(bRotated), Lookup))
+	if (!Definition || Count <= 0 || Count > FMath::Max(Definition->MaxStack, 1) || !IsSlotFree(Slot))
 	{
 		return false;
 	}
@@ -170,19 +159,22 @@ bool FRubezhInventoryGrid::AddEntryAt(FName ItemId, int32 Count, FIntPoint Posit
 	FRubezhInventoryEntry& Entry = Entries.AddDefaulted_GetRef();
 	Entry.ItemId = ItemId;
 	Entry.Count = Count;
-	Entry.Position = Position;
-	Entry.bRotated = bRotated;
+	Entry.Slot = Slot;
 	return true;
 }
 
-bool FRubezhInventoryGrid::Resize(FIntPoint NewSize, FRubezhItemLookup Lookup)
+bool FRubezhInventoryGrid::Resize(int32 NewSlotCount)
 {
-	FRubezhInventoryGrid Result(NewSize);
-	TArray<const FRubezhInventoryEntry*> Displaced;
+	if (NewSlotCount < 0 || Entries.Num() > NewSlotCount)
+	{
+		return false;
+	}
 
+	FRubezhInventoryGrid Result(NewSlotCount);
+	TArray<const FRubezhInventoryEntry*> Displaced;
 	for (const FRubezhInventoryEntry& Entry : Entries)
 	{
-		if (Result.IsAreaFree(Entry.Position, GetEntryFootprint(Entry, Lookup), Lookup))
+		if (Entry.Slot < NewSlotCount)
 		{
 			Result.Entries.Add(Entry);
 		}
@@ -194,21 +186,41 @@ bool FRubezhInventoryGrid::Resize(FIntPoint NewSize, FRubezhItemLookup Lookup)
 
 	for (const FRubezhInventoryEntry* Entry : Displaced)
 	{
-		const FRubezhItemDefinition* Definition = Lookup(Entry->ItemId);
-		FIntPoint Position;
-		bool bRotated = false;
-		if (!Definition || !Result.FindFreeSpot(*Definition, Lookup, Position, bRotated))
-		{
-			return false;
-		}
-
 		FRubezhInventoryEntry& Placed = Result.Entries.Add_GetRef(*Entry);
-		Placed.Position = Position;
-		Placed.bRotated = bRotated;
+		Placed.Slot = Result.FindFreeSlot();
 	}
 
 	*this = MoveTemp(Result);
 	return true;
+}
+
+TArray<FRubezhInventoryEntry> FRubezhInventoryGrid::ExtractEntries(TFunctionRef<bool(const FRubezhInventoryEntry&)> Predicate)
+{
+	TArray<FRubezhInventoryEntry> Extracted;
+	for (int32 Index = 0; Index < Entries.Num();)
+	{
+		if (Predicate(Entries[Index]))
+		{
+			Extracted.Add(Entries[Index]);
+			Entries.RemoveAt(Index);
+		}
+		else
+		{
+			++Index;
+		}
+	}
+	return Extracted;
+}
+
+FRubezhInventoryGrid FRubezhInventoryGrid::FromEntries(const TArray<FRubezhInventoryEntry>& InEntries)
+{
+	FRubezhInventoryGrid Result(InEntries.Num());
+	Result.Entries = InEntries;
+	for (int32 Index = 0; Index < Result.Entries.Num(); ++Index)
+	{
+		Result.Entries[Index].Slot = Index;
+	}
+	return Result;
 }
 
 int32 FRubezhInventoryGrid::CountItem(FName ItemId) const

@@ -13,6 +13,9 @@
 #include "Health/RubezhHealthEffects.h"
 #include "Health/RubezhInjuryComponent.h"
 #include "Items/RubezhInventoryComponent.h"
+#include "Items/RubezhLootContainer.h"
+#include "Items/RubezhPickupRules.h"
+#include "EngineUtils.h"
 #include "Items/RubezhWorldItem.h"
 #include "RubezhCoreRuntimeModule.h"
 #include "RubezhGameplayTags.h"
@@ -154,7 +157,7 @@ namespace
 		FRubezhInventoryGrid Grid = Inventory->GetGrid();
 		Rubezh::Equipment::FEquipped Equipped = Inventory->GetEquippedItems();
 		const Rubezh::Equipment::EResult Result = Rubezh::Equipment::Equip(Grid, Equipped, Index,
-			[Inventory](FName Id) { return Inventory->FindDefinition(Id); }, URubezhInventoryComponent::GetPocketsSize());
+			[Inventory](FName Id) { return Inventory->FindDefinition(Id); }, URubezhInventoryComponent::GetPocketSlots());
 		Inventory->ServerEquipEntry(Index);
 		UE_LOG(LogRubezh, Display, TEXT("Rubezh.Equip %s: %s"), *Args[0],
 			Result == Rubezh::Equipment::EResult::Ok ? TEXT("надето") : Rubezh::Equipment::Describe(Result));
@@ -178,9 +181,9 @@ namespace
 
 		FRubezhInventoryGrid Grid = Inventory->GetGrid();
 		Rubezh::Equipment::FEquipped Equipped = Inventory->GetEquippedItems();
-		const Rubezh::Equipment::EResult Result = Rubezh::Equipment::Unequip(Grid, Equipped, Slot, {}, false,
-			[Inventory](FName Id) { return Inventory->FindDefinition(Id); }, URubezhInventoryComponent::GetPocketsSize());
-		Inventory->ServerUnequip(Slot, FIntPoint::ZeroValue, false, true);
+		const Rubezh::Equipment::EResult Result = Rubezh::Equipment::Unequip(Grid, Equipped, Slot, {},
+			[Inventory](FName Id) { return Inventory->FindDefinition(Id); }, URubezhInventoryComponent::GetPocketSlots());
+		Inventory->ServerUnequip(Slot, INDEX_NONE);
 		UE_LOG(LogRubezh, Display, TEXT("Rubezh.Unequip %s: %s"), *Name,
 			Result == Rubezh::Equipment::EResult::Ok ? TEXT("снято") : Rubezh::Equipment::Describe(Result));
 	}
@@ -233,12 +236,90 @@ namespace
 			UE_LOG(LogRubezh, Display, TEXT("  [%s] %s"), Rubezh::Equipment::GetSlotName(Slot), *Inventory->GetEquipped(Slot).ToString());
 		}
 		const FRubezhInventoryGrid& Grid = Inventory->GetGrid();
-		UE_LOG(LogRubezh, Display, TEXT("Рюкзак %dx%d, стопок %d, вес %.2f кг"),
-			Grid.GetSize().X, Grid.GetSize().Y, Grid.GetEntries().Num(), Inventory->GetTotalWeight());
+		UE_LOG(LogRubezh, Display, TEXT("Рюкзак: занято %d из %d ячеек, вес %.2f кг"),
+			Grid.GetEntries().Num(), Grid.GetSlotCount(), Inventory->GetTotalWeight());
 		for (const FRubezhInventoryEntry& Entry : Grid.GetEntries())
 		{
-			UE_LOG(LogRubezh, Display, TEXT("  %s ×%d в (%d,%d)%s"),
-				*Entry.ItemId.ToString(), Entry.Count, Entry.Position.X, Entry.Position.Y, Entry.bRotated ? TEXT(" повёрнут") : TEXT(""));
+			UE_LOG(LogRubezh, Display, TEXT("  [%d] %s ×%d"), Entry.Slot, *Entry.ItemId.ToString(), Entry.Count);
+		}
+
+		if (const ARubezhLootContainer* Container = Inventory->GetLootContainer())
+		{
+			const FRubezhInventoryGrid& Loot = Inventory->GetLootGrid();
+			UE_LOG(LogRubezh, Display, TEXT("Обыск «%s»: занято %d из %d ячеек%s"), *Container->GetDisplayName().ToString(),
+				Loot.GetEntries().Num(), Loot.GetSlotCount(), Container->GetBagItemId().IsNone() ? TEXT("") : TEXT(" (брошенный рюкзак)"));
+			for (const FRubezhInventoryEntry& Entry : Loot.GetEntries())
+			{
+				UE_LOG(LogRubezh, Display, TEXT("  [%d] %s ×%d"), Entry.Slot, *Entry.ItemId.ToString(), Entry.Count);
+			}
+		}
+	}
+
+	/** Поставить перед собой ящик с лутом. */
+	void SpawnCrate(const TArray<FString>& Args, UWorld* World)
+	{
+		APawn* Pawn = FindLocalPawnOnServer(World);
+		if (!Pawn || Args.Num() < 1)
+		{
+			UE_LOG(LogRubezh, Display, TEXT("Rubezh.Crate <military|medical|civil> [ячеек] — ящик с лутом перед собой"));
+			return;
+		}
+
+		const int32 Slots = Args.Num() > 1 ? FCString::Atoi(*Args[1]) : 12;
+		const FVector Forward = Pawn->GetActorForwardVector().GetSafeNormal2D();
+		const FVector Location = ARubezhWorldItem::FindGround(*World, Pawn->GetActorLocation() + Forward * 120.0f, Pawn);
+		const ARubezhLootContainer* Crate = ARubezhLootContainer::SpawnCrate(*World,
+			FTransform(FRotator(0.0f, Pawn->GetActorRotation().Yaw, 0.0f), Location), FName(*Args[0]), Slots);
+		UE_LOG(LogRubezh, Display, TEXT("Rubezh.Crate %s: %s"), *Args[0], Crate ? TEXT("поставлен") : TEXT("не удалось"));
+	}
+
+	/** Обыскать ближайшее в досягаемости (как E, но без прицеливания). */
+	void SearchNearest(const TArray<FString>& Args, UWorld* World)
+	{
+		APawn* Pawn = FindLocalPawnOnServer(World);
+		URubezhInventoryComponent* Inventory = URubezhInventoryComponent::FindForActor(Pawn);
+		ARubezhLootContainer* Nearest = nullptr;
+		for (TActorIterator<ARubezhLootContainer> It(World); Pawn && It; ++It)
+		{
+			if (Rubezh::Pickup::IsWithinReach(Pawn->GetActorLocation(), It->GetFocusLocation(), false)
+				&& (!Nearest || FVector::Dist(Pawn->GetActorLocation(), It->GetActorLocation()) < FVector::Dist(Pawn->GetActorLocation(), Nearest->GetActorLocation())))
+			{
+				Nearest = *It;
+			}
+		}
+		if (!Inventory || !Nearest)
+		{
+			UE_LOG(LogRubezh, Display, TEXT("Rubezh.Search: рядом нечего обыскивать"));
+			return;
+		}
+		Inventory->ServerStartSearch(Nearest);
+		UE_LOG(LogRubezh, Display, TEXT("Rubezh.Search: обыск «%s», %.1f с"), *Nearest->GetDisplayName().ToString(), Inventory->GetSearchSecondsLeft());
+	}
+
+	void TakeAllLoot(const TArray<FString>& Args, UWorld* World)
+	{
+		if (URubezhInventoryComponent* Inventory = URubezhInventoryComponent::FindForActor(FindLocalPawnOnServer(World)))
+		{
+			Inventory->ServerTakeAllLoot();
+			PrintInventory(Args, World);
+		}
+	}
+
+	void WearLootBag(const TArray<FString>& Args, UWorld* World)
+	{
+		if (URubezhInventoryComponent* Inventory = URubezhInventoryComponent::FindForActor(FindLocalPawnOnServer(World)))
+		{
+			Inventory->ServerWearLootBag();
+			PrintInventory(Args, World);
+		}
+	}
+
+	void DropBackpack(const TArray<FString>& Args, UWorld* World)
+	{
+		if (URubezhInventoryComponent* Inventory = URubezhInventoryComponent::FindForActor(FindLocalPawnOnServer(World)))
+		{
+			Inventory->ServerDropEquipped(ERubezhEquipSlot::Backpack);
+			PrintInventory(Args, World);
 		}
 	}
 
@@ -273,6 +354,26 @@ namespace
 	FAutoConsoleCommandWithWorldAndArgs ShootCommand(
 		TEXT("Rubezh.Shoot"), TEXT("Попадание в себя через расчёт урона Lyra: Rubezh.Shoot <урон> [head|torso|arms|legs]"),
 		FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&ShootSelf));
+
+	FAutoConsoleCommandWithWorldAndArgs CrateCommand(
+		TEXT("Rubezh.Crate"), TEXT("Ящик с лутом перед собой: Rubezh.Crate <military|medical|civil> [ячеек]"),
+		FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&SpawnCrate));
+
+	FAutoConsoleCommandWithWorldAndArgs SearchCommand(
+		TEXT("Rubezh.Search"), TEXT("Обыскать ближайший ящик, тело или рюкзак в досягаемости"),
+		FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&SearchNearest));
+
+	FAutoConsoleCommandWithWorldAndArgs TakeAllCommand(
+		TEXT("Rubezh.TakeAll"), TEXT("Забрать всё из обыскиваемого"),
+		FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&TakeAllLoot));
+
+	FAutoConsoleCommandWithWorldAndArgs WearBagCommand(
+		TEXT("Rubezh.WearBag"), TEXT("Надеть обыскиваемый брошенный рюкзак"),
+		FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&WearLootBag));
+
+	FAutoConsoleCommandWithWorldAndArgs DropBagCommand(
+		TEXT("Rubezh.DropBag"), TEXT("Сбросить рюкзак вместе с вещами"),
+		FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&DropBackpack));
 
 	FAutoConsoleCommandWithWorldAndArgs InventoryCommand(
 		TEXT("Rubezh.Inventory"), TEXT("Показать содержимое рюкзака и вес"),

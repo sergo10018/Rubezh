@@ -14,7 +14,7 @@ struct FComponentRequestHandle;
 
 /**
  * Клавиши «Рубежа» поверх раскладки Lyra: рюкзак (URubezhSettings::InventoryKey, по умолчанию I),
- * взаимодействие — подбор предметов (InteractKey, по умолчанию E) и быстрое лечение (HealKey, по умолчанию H).
+ * взаимодействие — подбор предметов и обыск (InteractKey, по умолчанию E) и быстрое лечение (HealKey, по умолчанию H).
  * Действия и раскладка создаются кодом и подключаются по событию Lyra «BindInputsNow» —
  * так же, как это делает действие Game Feature «Add Input Mapping», но без правки ассетов.
  * Lyra очищает раскладки при появлении нового персонажа, поэтому подключение повторяется после каждого возрождения.
@@ -30,6 +30,9 @@ public:
 
 	/** Открыть окно рюкзака, а если оно открыто — закрыть. */
 	void ToggleInventory(APlayerController* PlayerController);
+
+	/** Открыть окно рюкзака, если оно ещё не открыто (например, начался обыск). */
+	void OpenInventory(APlayerController* PlayerController);
 
 private:
 	void HandlePawnExtension(AActor* Actor, FName EventName);

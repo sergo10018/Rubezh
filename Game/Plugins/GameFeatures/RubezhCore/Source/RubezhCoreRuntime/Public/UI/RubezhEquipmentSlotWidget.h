@@ -13,8 +13,8 @@ class UTextBlock;
 
 /**
  * Слот снаряжения в окне рюкзака: название слота и надетый предмет.
- * Перетащить сюда предмет из сетки — надеть; перетащить отсюда в сетку — снять, за окно — бросить;
- * двойной клик — снять в сетку. Собран кодом, без ассета виджета.
+ * Перетащить сюда предмет из рюкзака — надеть; перетащить отсюда в рюкзак — снять, за окно — бросить
+ * (рюкзак падает вместе с вещами); двойной клик — снять в рюкзак. Собран кодом, без ассета виджета.
  */
 UCLASS()
 class RUBEZHCORERUNTIME_API URubezhEquipmentSlotWidget : public UUserWidget
@@ -40,7 +40,7 @@ protected:
 	virtual bool NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation) override;
 
 private:
-	/** Подходит ли перетаскиваемый из сетки предмет в этот слот. */
+	/** Подходит ли перетаскиваемый из рюкзака предмет в этот слот. */
 	bool AcceptsDrag(const UDragDropOperation* Operation) const;
 	void ResetHighlight();
 

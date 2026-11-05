@@ -9,14 +9,15 @@
 class UBorder;
 class UTextBlock;
 
-/** Подсказка над предметом на земле: «E — подобрать: Бинт ×4» или «Нет места в рюкзаке». Собрана кодом. */
+/** Подсказка под прицелом: название предмета или ящика и действие («E — подобрать», «Обыск… 1,5 с»). Собрана кодом. */
 UCLASS()
 class RUBEZHCORERUNTIME_API URubezhPickupPrompt : public UUserWidget
 {
 	GENERATED_BODY()
 
 public:
-	void SetContent(const FText& ItemName, int32 Count, int32 FittingCount);
+	/** bWarning — действие невозможно (красным). */
+	void SetMessage(const FText& Name, const FString& Action, bool bWarning);
 
 protected:
 	virtual void NativeOnInitialized() override;

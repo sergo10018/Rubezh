@@ -20,9 +20,17 @@ public:
 	UPROPERTY(Config, EditAnywhere, Category = "Items", Meta = (RequiredAssetDataTags = "RowStructure=/Script/RubezhCoreRuntime.RubezhItemDefinition"))
 	TSoftObjectPtr<UDataTable> ItemTable;
 
-	// Сетка без рюкзака — карманы, в клетках.
+	// Таблица лута ящиков (строки FRubezhLootTableRow), импортированная из data/loot_tables.csv.
+	UPROPERTY(Config, EditAnywhere, Category = "Items", Meta = (RequiredAssetDataTags = "RowStructure=/Script/RubezhCoreRuntime.RubezhLootTableRow"))
+	TSoftObjectPtr<UDataTable> LootTable;
+
+	// Сколько ячеек без рюкзака — карманы.
 	UPROPERTY(Config, EditAnywhere, Category = "Items", Meta = (ClampMin = 1))
-	FIntPoint PocketsSize = FIntPoint(4, 2);
+	int32 PocketSlots = 4;
+
+	// Сколько лежат на земле вещи, выпавшие при смерти (docs/gdd/00_Core_loop.md §4), секунд.
+	UPROPERTY(Config, EditAnywhere, Category = "Items", Meta = (ClampMin = 0))
+	float BodyLifetimeSeconds = 900.0f;
 
 	// Что надето на новом персонаже (идентификаторы предметов из таблицы).
 	UPROPERTY(Config, EditAnywhere, Category = "Items")

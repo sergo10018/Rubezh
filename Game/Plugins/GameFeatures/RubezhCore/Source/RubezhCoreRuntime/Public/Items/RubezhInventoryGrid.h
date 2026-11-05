@@ -10,7 +10,7 @@
 /** Поиск описания предмета по идентификатору (обычно — строка DataTable). nullptr — предмет неизвестен. */
 using FRubezhItemLookup = TFunctionRef<const FRubezhItemDefinition*(FName)>;
 
-/** Одна стопка предметов, лежащая в сетке. */
+/** Одна стопка предметов, лежащая в ячейке. */
 USTRUCT(BlueprintType)
 struct RUBEZHCORERUNTIME_API FRubezhInventoryEntry
 {
@@ -22,18 +22,15 @@ struct RUBEZHCORERUNTIME_API FRubezhInventoryEntry
 	UPROPERTY(BlueprintReadOnly, Category = "Rubezh|Inventory")
 	int32 Count = 0;
 
-	// Левая верхняя клетка.
+	// Номер ячейки (0 — первая).
 	UPROPERTY(BlueprintReadOnly, Category = "Rubezh|Inventory")
-	FIntPoint Position = FIntPoint::ZeroValue;
-
-	UPROPERTY(BlueprintReadOnly, Category = "Rubezh|Inventory")
-	bool bRotated = false;
+	int32 Slot = 0;
 };
 
 /**
- * Сетка рюкзака (docs/gdd/01_Системы_прототипа.md §2): предметы занимают прямоугольники клеток,
+ * Ячейки рюкзака или ящика (docs/gdd/01_Системы_прототипа.md §2): любой предмет занимает ровно одну ячейку,
  * одинаковые предметы складываются в стопки до MaxStack. Только данные и правила, без сети и UI —
- * владелец (серверный компонент) вызывает эти функции и реплицирует результат.
+ * владелец (серверный компонент или ящик) вызывает эти функции и реплицирует результат.
  */
 USTRUCT(BlueprintType)
 struct RUBEZHCORERUNTIME_API FRubezhInventoryGrid
@@ -41,19 +38,22 @@ struct RUBEZHCORERUNTIME_API FRubezhInventoryGrid
 	GENERATED_BODY()
 
 	FRubezhInventoryGrid() = default;
-	explicit FRubezhInventoryGrid(FIntPoint InSize) : Size(InSize) {}
+	explicit FRubezhInventoryGrid(int32 InSlotCount) : SlotCount(FMath::Max(InSlotCount, 0)) {}
 
 	const TArray<FRubezhInventoryEntry>& GetEntries() const { return Entries; }
-	FIntPoint GetSize() const { return Size; }
+	int32 GetSlotCount() const { return SlotCount; }
+	bool IsEmpty() const { return Entries.IsEmpty(); }
 
-	/** Свободна ли область (и целиком ли внутри сетки). IgnoreIndex — стопка, которую сейчас переносим. */
-	bool IsAreaFree(FIntPoint Position, FIntPoint Footprint, FRubezhItemLookup Lookup, int32 IgnoreIndex = INDEX_NONE) const;
+	/** Какая стопка лежит в ячейке; INDEX_NONE — ячейка пуста. */
+	int32 FindEntryAt(int32 Slot) const;
 
-	/** Первая свободная позиция: сначала без поворота, потом с поворотом. */
-	bool FindFreeSpot(const FRubezhItemDefinition& Definition, FRubezhItemLookup Lookup, FIntPoint& OutPosition, bool& bOutRotated) const;
+	bool IsSlotFree(int32 Slot) const { return Slot >= 0 && Slot < SlotCount && FindEntryAt(Slot) == INDEX_NONE; }
 
-	/** Добавить: сначала доложить в неполные стопки, потом занять свободные места. Возвращает, сколько не влезло. */
-	int32 AddItem(FName ItemId, const FRubezhItemDefinition& Definition, int32 Count, FRubezhItemLookup Lookup);
+	/** Первая пустая ячейка; INDEX_NONE — всё занято. */
+	int32 FindFreeSlot() const;
+
+	/** Добавить: сначала доложить в неполные стопки, потом занять пустые ячейки. Возвращает, сколько не влезло. */
+	int32 AddItem(FName ItemId, const FRubezhItemDefinition& Definition, int32 Count);
 
 	/** Убрать штуки предмета, начиная с последней стопки. Возвращает, сколько убрано. */
 	int32 RemoveItem(FName ItemId, int32 Count);
@@ -61,17 +61,33 @@ struct RUBEZHCORERUNTIME_API FRubezhInventoryGrid
 	/** Вынуть стопку целиком (например, чтобы выбросить). false — такой стопки нет. */
 	bool RemoveEntry(int32 EntryIndex, FRubezhInventoryEntry& OutRemoved);
 
-	/** Переложить стопку на новое место (с поворотом или без). false — место занято или вне сетки. */
-	bool MoveEntry(int32 EntryIndex, FIntPoint NewPosition, bool bRotated, FRubezhItemLookup Lookup);
+	/** Доложить в стопку до MaxStack. Возвращает, сколько доложено. */
+	int32 AddToEntry(int32 EntryIndex, int32 Count, int32 MaxStack);
 
-	/** Положить стопку в указанное место (например, снятую куртку). false — место занято или вне сетки. */
-	bool AddEntryAt(FName ItemId, int32 Count, FIntPoint Position, bool bRotated, FRubezhItemLookup Lookup);
+	/** Уменьшить стопку на Count штук (0 штук — стопка удаляется). false — такой стопки нет или в ней меньше. */
+	bool ReduceEntry(int32 EntryIndex, int32 Count);
 
 	/**
-	 * Поменять размер сетки (сменили рюкзак). Вещи, которые помещаются на своих местах, остаются там,
-	 * остальные раскладываются заново. false — всё не влезет; тогда сетка не меняется.
+	 * Переложить стопку в ячейку, как в рюкзаке WoW: в пустую — переносится, на такой же предмет —
+	 * докладывается (сколько влезет в стопку), на другой предмет — они меняются местами.
+	 * false — ячейка вне рюкзака или такой стопки нет.
 	 */
-	bool Resize(FIntPoint NewSize, FRubezhItemLookup Lookup);
+	bool MoveEntry(int32 EntryIndex, int32 NewSlot, FRubezhItemLookup Lookup);
+
+	/** Положить стопку в указанную ячейку (например, снятую куртку). false — ячейка занята или вне рюкзака. */
+	bool AddEntryAt(FName ItemId, int32 Count, int32 Slot, FRubezhItemLookup Lookup);
+
+	/**
+	 * Поменять число ячеек (сменили рюкзак). Вещи, ячейки которых остались, лежат на месте,
+	 * остальные переезжают в свободные. false — всё не влезет; тогда ничего не меняется.
+	 */
+	bool Resize(int32 NewSlotCount);
+
+	/** Вынуть все стопки, для которых Predicate вернул true (порядок сохраняется). */
+	TArray<FRubezhInventoryEntry> ExtractEntries(TFunctionRef<bool(const FRubezhInventoryEntry&)> Predicate);
+
+	/** Набор ячеек ровно под эти стопки, разложенные по порядку с первой ячейки (например, вещи на теле). */
+	static FRubezhInventoryGrid FromEntries(const TArray<FRubezhInventoryEntry>& InEntries);
 
 	int32 CountItem(FName ItemId) const;
 
@@ -79,10 +95,8 @@ struct RUBEZHCORERUNTIME_API FRubezhInventoryGrid
 	float GetTotalWeight(FRubezhItemLookup Lookup) const;
 
 private:
-	FIntPoint GetEntryFootprint(const FRubezhInventoryEntry& Entry, FRubezhItemLookup Lookup) const;
-
 	UPROPERTY()
-	FIntPoint Size = FIntPoint(6, 8);
+	int32 SlotCount = 0;
 
 	UPROPERTY()
 	TArray<FRubezhInventoryEntry> Entries;

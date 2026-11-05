@@ -19,11 +19,11 @@ namespace Rubezh::Equipment
 			return Result;
 		}
 
-		/** Новый размер сетки после смены надетого; при смене рюкзака сетка перекладывается. */
-		bool ResizeFor(FRubezhInventoryGrid& Grid, const FEquipped& Equipped, FRubezhItemLookup Lookup, FIntPoint PocketsSize)
+		/** Новое число ячеек после смены надетого; при смене рюкзака вещи перекладываются. */
+		bool ResizeFor(FRubezhInventoryGrid& Grid, const FEquipped& Equipped, FRubezhItemLookup Lookup, int32 PocketSlots)
 		{
-			const FIntPoint NewSize = GetGridSize(Equipped, Lookup, PocketsSize);
-			return NewSize == Grid.GetSize() || Grid.Resize(NewSize, Lookup);
+			const int32 NewCount = GetSlotCount(Equipped, Lookup, PocketSlots);
+			return NewCount == Grid.GetSlotCount() || Grid.Resize(NewCount);
 		}
 	}
 
@@ -111,11 +111,11 @@ namespace Rubezh::Equipment
 		return Result;
 	}
 
-	FIntPoint GetGridSize(const FEquipped& Equipped, FRubezhItemLookup Lookup, FIntPoint PocketsSize)
+	int32 GetSlotCount(const FEquipped& Equipped, FRubezhItemLookup Lookup, int32 PocketSlots)
 	{
 		const FName Backpack = GetEquipped(Equipped, ERubezhEquipSlot::Backpack);
 		const FRubezhItemDefinition* Item = Backpack.IsNone() ? nullptr : Lookup(Backpack);
-		return (Item && Item->BackpackWidth > 0 && Item->BackpackHeight > 0) ? FIntPoint(Item->BackpackWidth, Item->BackpackHeight) : PocketsSize;
+		return (Item && Item->BackpackSlots > 0) ? Item->BackpackSlots : PocketSlots;
 	}
 
 	float GetCarryBonusKg(const FEquipped& Equipped, FRubezhItemLookup Lookup)
@@ -165,12 +165,13 @@ namespace Rubezh::Equipment
 		case EResult::NotWearable: return TEXT("Это не надевается");
 		case EResult::Missing:     return TEXT("Предмета нет");
 		case EResult::WontFit:     return TEXT("Вещи не поместятся — сначала освободите место");
+		case EResult::SlotTaken:   return TEXT("Сначала снимите свой рюкзак");
 		case EResult::NoRoom:
-		default:                   return TEXT("Некуда положить снятое — нет места в сетке");
+		default:                   return TEXT("Некуда положить — нет свободной ячейки");
 		}
 	}
 
-	EResult Equip(FRubezhInventoryGrid& Grid, FEquipped& Equipped, int32 EntryIndex, FRubezhItemLookup Lookup, FIntPoint PocketsSize)
+	EResult Equip(FRubezhInventoryGrid& Grid, FEquipped& Equipped, int32 EntryIndex, FRubezhItemLookup Lookup, int32 PocketSlots)
 	{
 		if (!Grid.GetEntries().IsValidIndex(EntryIndex))
 		{
@@ -188,16 +189,11 @@ namespace Rubezh::Equipment
 		FRubezhInventoryGrid NewGrid = Grid;
 		FEquipped NewEquipped = Normalized(Equipped);
 
-		FRubezhInventoryEntry Taken;
-		NewGrid.RemoveEntry(EntryIndex, Taken);
-		if (Entry.Count > 1 && !NewGrid.AddEntryAt(Entry.ItemId, Entry.Count - 1, Entry.Position, Entry.bRotated, Lookup))
-		{
-			return EResult::NoRoom;
-		}
+		NewGrid.ReduceEntry(EntryIndex, 1);
 
 		const FName Previous = NewEquipped[SlotIndex];
 		NewEquipped[SlotIndex] = Entry.ItemId;
-		if (!ResizeFor(NewGrid, NewEquipped, Lookup, PocketsSize))
+		if (!ResizeFor(NewGrid, NewEquipped, Lookup, PocketSlots))
 		{
 			return EResult::WontFit;
 		}
@@ -205,7 +201,7 @@ namespace Rubezh::Equipment
 		if (!Previous.IsNone())
 		{
 			const FRubezhItemDefinition* PreviousItem = Lookup(Previous);
-			if (!PreviousItem || NewGrid.AddItem(Previous, *PreviousItem, 1, Lookup) != 0)
+			if (!PreviousItem || NewGrid.AddItem(Previous, *PreviousItem, 1) != 0)
 			{
 				return EResult::NoRoom;
 			}
@@ -216,7 +212,7 @@ namespace Rubezh::Equipment
 		return EResult::Ok;
 	}
 
-	EResult TakeOff(FRubezhInventoryGrid& Grid, FEquipped& Equipped, ERubezhEquipSlot Slot, FRubezhItemLookup Lookup, FIntPoint PocketsSize, FName& OutItemId)
+	EResult TakeOff(FRubezhInventoryGrid& Grid, FEquipped& Equipped, ERubezhEquipSlot Slot, FRubezhItemLookup Lookup, int32 PocketSlots, FName& OutItemId)
 	{
 		const int32 SlotIndex = GetSlotIndex(Slot);
 		FEquipped NewEquipped = Normalized(Equipped);
@@ -228,7 +224,7 @@ namespace Rubezh::Equipment
 		FRubezhInventoryGrid NewGrid = Grid;
 		const FName ItemId = NewEquipped[SlotIndex];
 		NewEquipped[SlotIndex] = NAME_None;
-		if (!ResizeFor(NewGrid, NewEquipped, Lookup, PocketsSize))
+		if (!ResizeFor(NewGrid, NewEquipped, Lookup, PocketSlots))
 		{
 			return EResult::WontFit;
 		}
@@ -240,24 +236,76 @@ namespace Rubezh::Equipment
 	}
 
 	EResult Unequip(FRubezhInventoryGrid& Grid, FEquipped& Equipped, ERubezhEquipSlot Slot,
-		TOptional<FIntPoint> Position, bool bRotated, FRubezhItemLookup Lookup, FIntPoint PocketsSize)
+		TOptional<int32> TargetSlot, FRubezhItemLookup Lookup, int32 PocketSlots)
 	{
 		FRubezhInventoryGrid NewGrid = Grid;
 		FEquipped NewEquipped = Equipped;
 		FName ItemId;
-		const EResult Result = TakeOff(NewGrid, NewEquipped, Slot, Lookup, PocketsSize, ItemId);
+		const EResult Result = TakeOff(NewGrid, NewEquipped, Slot, Lookup, PocketSlots, ItemId);
 		if (Result != EResult::Ok)
 		{
 			return Result;
 		}
 
 		const FRubezhItemDefinition* Item = Lookup(ItemId);
-		const bool bPlaced = Item && (Position.IsSet()
-			? NewGrid.AddEntryAt(ItemId, 1, Position.GetValue(), bRotated, Lookup)
-			: NewGrid.AddItem(ItemId, *Item, 1, Lookup) == 0);
+		const bool bPlaced = Item && (TargetSlot.IsSet()
+			? NewGrid.AddEntryAt(ItemId, 1, TargetSlot.GetValue(), Lookup)
+			: NewGrid.AddItem(ItemId, *Item, 1) == 0);
 		if (!bPlaced)
 		{
 			return EResult::NoRoom;
+		}
+
+		Grid = MoveTemp(NewGrid);
+		Equipped = MoveTemp(NewEquipped);
+		return EResult::Ok;
+	}
+
+	EResult DropBag(FRubezhInventoryGrid& Grid, FEquipped& Equipped, int32 PocketSlots, FName& OutBagId, FRubezhInventoryGrid& OutContents)
+	{
+		const int32 SlotIndex = GetSlotIndex(ERubezhEquipSlot::Backpack);
+		FEquipped NewEquipped = Normalized(Equipped);
+		if (NewEquipped[SlotIndex].IsNone())
+		{
+			return EResult::Missing;
+		}
+
+		OutBagId = NewEquipped[SlotIndex];
+		OutContents = Grid;
+		NewEquipped[SlotIndex] = NAME_None;
+		Equipped = MoveTemp(NewEquipped);
+		Grid = FRubezhInventoryGrid(PocketSlots);
+		return EResult::Ok;
+	}
+
+	EResult WearBag(FRubezhInventoryGrid& Grid, FEquipped& Equipped, FName BagId, const FRubezhInventoryGrid& BagContents, FRubezhItemLookup Lookup)
+	{
+		const int32 SlotIndex = GetSlotIndex(ERubezhEquipSlot::Backpack);
+		const FRubezhItemDefinition* Bag = Lookup(BagId);
+		FEquipped NewEquipped = Normalized(Equipped);
+		if (!Bag || Bag->EquipSlot != ERubezhEquipSlot::Backpack)
+		{
+			return EResult::NotWearable;
+		}
+		if (!NewEquipped[SlotIndex].IsNone())
+		{
+			return EResult::SlotTaken;
+		}
+
+		// Брошенный рюкзак со своим содержимым, плюс то, что было в карманах.
+		NewEquipped[SlotIndex] = BagId;
+		FRubezhInventoryGrid NewGrid = BagContents;
+		if (!NewGrid.Resize(GetSlotCount(NewEquipped, Lookup, Grid.GetSlotCount())))
+		{
+			return EResult::WontFit;
+		}
+		for (const FRubezhInventoryEntry& Entry : Grid.GetEntries())
+		{
+			const FRubezhItemDefinition* Item = Lookup(Entry.ItemId);
+			if (!Item || NewGrid.AddItem(Entry.ItemId, *Item, Entry.Count) != 0)
+			{
+				return EResult::WontFit;
+			}
 		}
 
 		Grid = MoveTemp(NewGrid);
@@ -273,7 +321,7 @@ namespace Rubezh::Equipment
 		}
 		if (Item.EquipSlot == ERubezhEquipSlot::Backpack)
 		{
-			return FString::Printf(TEXT("Рюкзак: %d×%d клеток, +%.0f кг к лимиту веса"), Item.BackpackWidth, Item.BackpackHeight, Item.CarryBonusKg);
+			return FString::Printf(TEXT("Рюкзак: %d ячеек, +%.0f кг к лимиту веса"), Item.BackpackSlots, Item.CarryBonusKg);
 		}
 
 		TArray<FString> Zones;

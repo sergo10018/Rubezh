@@ -12,7 +12,7 @@ struct FRubezhItemDefinition;
 
 /**
  * Стопка предметов, лежащая в мире: её можно подобрать (URubezhInteractionComponent),
- * в неё превращается выброшенное из рюкзака. Пока без моделей — коробка размером с предмет в сетке,
+ * в неё превращается выброшенное из рюкзака. Пока без моделей — коробка (чем тяжелее предмет, тем больше),
  * окрашенная по категории. Количество меняет только сервер.
  * Можно ставить на карту вручную: в свойствах задать Item Id (строка из DT_Items) и Count.
  */
@@ -26,6 +26,15 @@ public:
 
 	/** Только сервер: положить стопку на землю перед персонажем. */
 	static ARubezhWorldItem* SpawnInFrontOf(APawn& Pawn, FName ItemId, int32 Count);
+
+	/** Только сервер: положить стопку в указанное место. */
+	static ARubezhWorldItem* SpawnAt(UWorld& World, const FTransform& Transform, FName ItemId, int32 Count);
+
+	/** Точка на земле под Point (или сам Point, если земли рядом нет). Ignore — кого не считать землёй. */
+	static FVector FindGround(UWorld& World, const FVector& Point, const AActor* Ignore);
+
+	/** Точка на земле перед персонажем, куда падает выброшенное (с небольшим разбросом). */
+	static FVector FindDropLocation(const APawn& Pawn);
 
 	FName GetItemId() const { return ItemId; }
 	int32 GetCount() const { return Count; }

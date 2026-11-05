@@ -6,13 +6,14 @@
 
 #include "RubezhInteractionComponent.generated.h"
 
+class ARubezhLootContainer;
 class ARubezhWorldItem;
 class URubezhPickupPrompt;
 
 /**
- * Подбор предметов с земли. Живёт на персонаже игрока (добавляет URubezhComponentInjector).
- * У своего игрока каждый кадр ищет предмет, на который он смотрит, и показывает подсказку;
- * по клавише взаимодействия просит сервер подобрать. Сервер сам проверяет расстояние и место в рюкзаке.
+ * Подбор предметов с земли и обыск (ящики, тела, брошенные рюкзаки). Живёт на персонаже игрока
+ * (добавляет URubezhComponentInjector). У своего игрока каждый кадр ищет, на что он смотрит, и показывает подсказку;
+ * по клавише взаимодействия просит сервер подобрать или начать обыск. Сервер сам проверяет расстояние и место в рюкзаке.
  */
 UCLASS(ClassGroup = Rubezh, Meta = (BlueprintSpawnableComponent))
 class RUBEZHCORERUNTIME_API URubezhInteractionComponent : public UPawnComponent
@@ -22,10 +23,11 @@ class RUBEZHCORERUNTIME_API URubezhInteractionComponent : public UPawnComponent
 public:
 	URubezhInteractionComponent(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
 
-	/** Клавиша взаимодействия нажата: подобрать предмет, на который смотрим. */
+	/** Клавиша взаимодействия нажата: подобрать предмет или обыскать то, на что смотрим. */
 	void Interact();
 
-	ARubezhWorldItem* GetFocusedItem() const { return FocusedItem.Get(); }
+	/** Предмет на земле или контейнер, на который смотрит игрок (nullptr — ничего). */
+	AActor* GetFocusedActor() const { return FocusedActor.Get(); }
 
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
@@ -37,13 +39,18 @@ private:
 	void ServerPickUp(ARubezhWorldItem* Item);
 
 	bool IsLocalPlayerPawn() const;
-	ARubezhWorldItem* FindFocusedItem() const;
+	AActor* FindFocusedActor() const;
 	void UpdatePrompt();
+	void ShowPrompt(const FText& Name, const FString& Action, bool bWarning);
+	void HidePrompt();
+
+	/** Подсказка для контейнера: «E — обыскать» или сколько осталось обыскивать. */
+	FString DescribeContainerAction(const ARubezhLootContainer& Container) const;
 
 	/** Сколько штук предмета сейчас влезет в рюкзак (по копии содержимого, которое знает клиент). */
 	int32 CountFitting(const ARubezhWorldItem& Item) const;
 
-	TWeakObjectPtr<ARubezhWorldItem> FocusedItem;
+	TWeakObjectPtr<AActor> FocusedActor;
 
 	UPROPERTY(Transient)
 	TObjectPtr<URubezhPickupPrompt> Prompt;

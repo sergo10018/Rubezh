@@ -14,26 +14,30 @@ class URubezhInventoryWindow;
 class USizeBox;
 class UTextBlock;
 
-/**
- * Что перетаскиваем: стопку из сетки (EntryIndex) или надетый предмет (FromSlot),
- * и за какую точку его взяли (в пикселях от левого верхнего угла).
- */
+/** Откуда предмет в окне: свой рюкзак, обыскиваемый ящик (тело, брошенный рюкзак) или слот снаряжения. */
+enum class ERubezhItemSource : uint8
+{
+	Backpack,
+	Loot,
+	Equipment
+};
+
+/** Что перетаскиваем: стопку (Source + EntryIndex) или надетый предмет (FromSlot). */
 UCLASS()
 class RUBEZHCORERUNTIME_API URubezhInventoryDragOperation : public UDragDropOperation
 {
 	GENERATED_BODY()
 
 public:
+	ERubezhItemSource Source = ERubezhItemSource::Backpack;
 	int32 EntryIndex = INDEX_NONE;
+	FName ItemId;
 	ERubezhEquipSlot FromSlot = ERubezhEquipSlot::None;
-	bool bRotated = false;
-	FIntPoint Footprint = FIntPoint(1, 1);
-	FVector2D GrabOffset = FVector2D::ZeroVector;
 };
 
 /**
- * Плитка предмета в сетке: цветной прямоугольник с названием и количеством.
- * ЛКМ — перетащить, ПКМ — повернуть. Собирается кодом, без ассета виджета.
+ * Плитка предмета: одна ячейка с названием и количеством. ЛКМ — перетащить; ПКМ — переложить между рюкзаком
+ * и обыскиваемым; двойной клик — применить или надеть (в рюкзаке), забрать (при обыске). Собирается кодом, без ассета.
  */
 UCLASS()
 class RUBEZHCORERUNTIME_API URubezhInventoryItemWidget : public UUserWidget
@@ -42,9 +46,8 @@ class RUBEZHCORERUNTIME_API URubezhInventoryItemWidget : public UUserWidget
 
 public:
 	/** Window == nullptr — плитка только для показа (картинка под курсором при перетаскивании). */
-	void Setup(URubezhInventoryWindow* InWindow, int32 InEntryIndex, const FRubezhInventoryEntry& InEntry, const FRubezhItemDefinition& InDefinition);
-
-	FIntPoint GetFootprint() const { return Definition.GetFootprint(Entry.bRotated); }
+	void Setup(URubezhInventoryWindow* InWindow, ERubezhItemSource InSource, int32 InEntryIndex,
+		const FRubezhInventoryEntry& InEntry, const FRubezhItemDefinition& InDefinition);
 
 protected:
 	virtual void NativeOnInitialized() override;
@@ -57,10 +60,10 @@ private:
 	FText BuildTooltip() const;
 
 	TWeakObjectPtr<URubezhInventoryWindow> Window;
+	ERubezhItemSource Source = ERubezhItemSource::Backpack;
 	int32 EntryIndex = INDEX_NONE;
 	FRubezhInventoryEntry Entry;
 	FRubezhItemDefinition Definition;
-	FVector2D GrabOffset = FVector2D::ZeroVector;
 
 	UPROPERTY(Transient)
 	TObjectPtr<USizeBox> SizeBox;

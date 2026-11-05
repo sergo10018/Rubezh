@@ -7,9 +7,11 @@
 #include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerController.h"
 #include "Items/RubezhInventoryComponent.h"
+#include "Items/RubezhLootContainer.h"
 #include "Items/RubezhPickupRules.h"
 #include "Items/RubezhWorldItem.h"
 #include "RubezhCoreRuntimeModule.h"
+#include "RubezhSettings.h"
 #include "UI/RubezhInventoryStyle.h"
 #include "UI/RubezhPickupPrompt.h"
 
@@ -19,6 +21,15 @@ namespace
 {
 	// Подсказка под окнами интерфейса Lyra.
 	constexpr int32 PromptZOrder = -10;
+
+	FVector GetFocusLocation(const AActor& Actor)
+	{
+		if (const ARubezhWorldItem* Item = Cast<ARubezhWorldItem>(&Actor))
+		{
+			return Item->GetFocusLocation();
+		}
+		return CastChecked<ARubezhLootContainer>(&Actor)->GetFocusLocation();
+	}
 }
 
 URubezhInteractionComponent::URubezhInteractionComponent(const FObjectInitializer& ObjectInitializer)
@@ -36,7 +47,7 @@ void URubezhInteractionComponent::EndPlay(const EEndPlayReason::Type EndPlayReas
 		Prompt->RemoveFromParent();
 		Prompt = nullptr;
 	}
-	FocusedItem.Reset();
+	FocusedActor.Reset();
 
 	Super::EndPlay(EndPlayReason);
 }
@@ -57,11 +68,11 @@ void URubezhInteractionComponent::TickComponent(float DeltaTime, ELevelTick Tick
 		return;
 	}
 
-	FocusedItem = FindFocusedItem();
+	FocusedActor = FindFocusedActor();
 	UpdatePrompt();
 }
 
-ARubezhWorldItem* URubezhInteractionComponent::FindFocusedItem() const
+AActor* URubezhInteractionComponent::FindFocusedActor() const
 {
 	const APawn* Pawn = GetPawn<APawn>();
 	const APlayerController* Controller = GetController<APlayerController>();
@@ -80,22 +91,23 @@ ARubezhWorldItem* URubezhInteractionComponent::FindFocusedItem() const
 	World->OverlapMultiByObjectType(Overlaps, Pawn->GetActorLocation(), FQuat::Identity,
 		FCollisionObjectQueryParams(ECC_WorldDynamic), FCollisionShape::MakeSphere(Rubezh::Pickup::ReachCm), QueryParams);
 
-	ARubezhWorldItem* Best = nullptr;
+	AActor* Best = nullptr;
 	float BestScore = TNumericLimits<float>::Max();
 	for (const FOverlapResult& Overlap : Overlaps)
 	{
-		ARubezhWorldItem* Item = Cast<ARubezhWorldItem>(Overlap.GetActor());
-		if (!Item || !IsValid(Item))
+		AActor* Candidate = Overlap.GetActor();
+		const bool bInteractive = Cast<ARubezhWorldItem>(Candidate) || Cast<ARubezhLootContainer>(Candidate);
+		if (!bInteractive || !IsValid(Candidate))
 		{
 			continue;
 		}
 
 		const TOptional<float> Score = Rubezh::Pickup::ScoreCandidate(ViewLocation, ViewRotation.Vector(),
-			Pawn->GetActorLocation(), Item->GetFocusLocation());
+			Pawn->GetActorLocation(), GetFocusLocation(*Candidate));
 		if (Score.IsSet() && Score.GetValue() < BestScore)
 		{
 			BestScore = Score.GetValue();
-			Best = Item;
+			Best = Candidate;
 		}
 	}
 	return Best;
@@ -112,22 +124,62 @@ int32 URubezhInteractionComponent::CountFitting(const ARubezhWorldItem& Item) co
 
 	// Пробуем на копии рюкзака: настоящий меняет только сервер.
 	FRubezhInventoryGrid Trial = Inventory->GetGrid();
-	const int32 NotAdded = Trial.AddItem(Item.GetItemId(), *Definition, Item.GetCount(),
-		[Inventory](FName Id) { return Inventory->FindDefinition(Id); });
-	return Item.GetCount() - NotAdded;
+	return Item.GetCount() - Trial.AddItem(Item.GetItemId(), *Definition, Item.GetCount());
+}
+
+FString URubezhInteractionComponent::DescribeContainerAction(const ARubezhLootContainer& Container) const
+{
+	const URubezhInventoryComponent* Inventory = URubezhInventoryComponent::FindForActor(GetPawn<APawn>());
+	if (Inventory && Inventory->IsSearching(&Container))
+	{
+		return FString::Printf(TEXT("Обыск… %.1f с"), Inventory->GetSearchSecondsLeft());
+	}
+
+	const FString Key = GetDefault<URubezhSettings>()->InteractKey.GetDisplayName().ToString();
+	return FString::Printf(TEXT("%s — обыскать"), *Key);
 }
 
 void URubezhInteractionComponent::UpdatePrompt()
 {
-	APlayerController* Controller = GetController<APlayerController>();
-	const ARubezhWorldItem* Item = FocusedItem.Get();
-	const FRubezhItemDefinition* Definition = Item ? Item->FindDefinition() : nullptr;
-	if (!Controller || !Definition)
+	const AActor* Focused = FocusedActor.Get();
+	if (const ARubezhLootContainer* Container = Cast<ARubezhLootContainer>(Focused))
 	{
-		if (Prompt)
-		{
-			Prompt->SetVisibility(ESlateVisibility::Collapsed);
-		}
+		ShowPrompt(Container->GetDisplayName(), DescribeContainerAction(*Container), false);
+		return;
+	}
+
+	const ARubezhWorldItem* Item = Cast<ARubezhWorldItem>(Focused);
+	const FRubezhItemDefinition* Definition = Item ? Item->FindDefinition() : nullptr;
+	if (!Definition)
+	{
+		HidePrompt();
+		return;
+	}
+
+	const int32 Count = Item->GetCount();
+	const int32 Fitting = CountFitting(*Item);
+	const FString Name = Count > 1 ? FString::Printf(TEXT("%s ×%d"), *Definition->DisplayName.ToString(), Count) : Definition->DisplayName.ToString();
+	const FString Key = GetDefault<URubezhSettings>()->InteractKey.GetDisplayName().ToString();
+	const FString Action = Fitting <= 0 ? FString(TEXT("Нет места в рюкзаке"))
+		: Fitting < Count ? FString::Printf(TEXT("%s — подобрать %d (больше не влезет)"), *Key, Fitting)
+		: FString::Printf(TEXT("%s — подобрать"), *Key);
+	ShowPrompt(FText::FromString(Name), Action, Fitting <= 0);
+}
+
+void URubezhInteractionComponent::HidePrompt()
+{
+	if (Prompt)
+	{
+		Prompt->SetVisibility(ESlateVisibility::Collapsed);
+	}
+}
+
+void URubezhInteractionComponent::ShowPrompt(const FText& Name, const FString& Action, bool bWarning)
+{
+	APlayerController* Controller = GetController<APlayerController>();
+	if (!Controller)
+	{
+		HidePrompt();
 		return;
 	}
 
@@ -140,15 +192,23 @@ void URubezhInteractionComponent::UpdatePrompt()
 		Prompt->AddToPlayerScreen(PromptZOrder);
 	}
 
-	Prompt->SetContent(Definition->DisplayName, Item->GetCount(), CountFitting(*Item));
+	Prompt->SetMessage(Name, Action, bWarning);
 	Prompt->SetVisibility(ESlateVisibility::HitTestInvisible);
 }
 
 void URubezhInteractionComponent::Interact()
 {
-	if (ARubezhWorldItem* Item = FocusedItem.Get())
+	AActor* Focused = FocusedActor.Get();
+	if (ARubezhWorldItem* Item = Cast<ARubezhWorldItem>(Focused))
 	{
 		ServerPickUp(Item);
+	}
+	else if (ARubezhLootContainer* Container = Cast<ARubezhLootContainer>(Focused))
+	{
+		if (URubezhInventoryComponent* Inventory = URubezhInventoryComponent::FindForActor(GetPawn<APawn>()))
+		{
+			Inventory->ServerStartSearch(Container);
+		}
 	}
 }
 

@@ -37,10 +37,12 @@ void URubezhInventoryItemWidget::NativeOnInitialized()
 	using namespace Rubezh::InventoryStyle;
 
 	SizeBox = WidgetTree->ConstructWidget<USizeBox>();
+	SizeBox->SetWidthOverride(CellSize - CellGap);
+	SizeBox->SetHeightOverride(CellSize - CellGap);
 	WidgetTree->RootWidget = SizeBox;
 
 	Frame = WidgetTree->ConstructWidget<UBorder>();
-	Frame->SetPadding(FMargin(4.0f, 2.0f));
+	Frame->SetPadding(FMargin(3.0f, 2.0f));
 	SizeBox->AddChild(Frame);
 
 	UOverlay* Layout = WidgetTree->ConstructWidget<UOverlay>();
@@ -58,20 +60,18 @@ void URubezhInventoryItemWidget::NativeOnInitialized()
 	CountSlot->SetVerticalAlignment(VAlign_Bottom);
 }
 
-void URubezhInventoryItemWidget::Setup(URubezhInventoryWindow* InWindow, int32 InEntryIndex, const FRubezhInventoryEntry& InEntry, const FRubezhItemDefinition& InDefinition)
+void URubezhInventoryItemWidget::Setup(URubezhInventoryWindow* InWindow, ERubezhItemSource InSource, int32 InEntryIndex,
+	const FRubezhInventoryEntry& InEntry, const FRubezhItemDefinition& InDefinition)
 {
 	using namespace Rubezh::InventoryStyle;
 
 	Window = InWindow;
+	Source = InSource;
 	EntryIndex = InEntryIndex;
 	Entry = InEntry;
 	Definition = InDefinition;
 
-	const FIntPoint Footprint = GetFootprint();
-	SizeBox->SetWidthOverride(Footprint.X * CellSize - CellGap);
-	SizeBox->SetHeightOverride(Footprint.Y * CellSize - CellGap);
 	Frame->SetBrushColor(GetCategoryColor(Definition.Category));
-
 	NameText->SetText(Definition.DisplayName);
 	CountText->SetText(Entry.Count > 1 ? FText::AsNumber(Entry.Count) : FText::GetEmpty());
 	SetToolTipText(BuildTooltip());
@@ -82,18 +82,32 @@ FText URubezhInventoryItemWidget::BuildTooltip() const
 {
 	const float StackWeight = Definition.WeightKg * Entry.Count;
 	const FString Stats = Rubezh::Equipment::DescribeStats(Definition);
-	FString UseHint;
-	if (Rubezh::Injuries::IsMedical(Definition))
+	const bool bLootOpen = Window.IsValid() && Window->IsLootOpen();
+
+	TArray<FString> Hints;
+	if (Source == ERubezhItemSource::Loot)
 	{
-		UseHint = TEXT("\nДвойной клик — применить");
+		Hints.Add(TEXT("Двойной клик или ПКМ — забрать"));
 	}
-	else if (Definition.EquipSlot != ERubezhEquipSlot::None)
+	else
 	{
-		UseHint = FString::Printf(TEXT("\nДвойной клик или перетащить в слот «%s» — надеть"), Rubezh::Equipment::GetSlotName(Definition.EquipSlot));
+		if (Rubezh::Injuries::IsMedical(Definition))
+		{
+			Hints.Add(TEXT("Двойной клик — применить"));
+		}
+		else if (Definition.EquipSlot != ERubezhEquipSlot::None)
+		{
+			Hints.Add(FString::Printf(TEXT("Двойной клик или перетащить в слот «%s» — надеть"), Rubezh::Equipment::GetSlotName(Definition.EquipSlot)));
+		}
+		if (bLootOpen)
+		{
+			Hints.Add(TEXT("ПКМ — положить в обыскиваемое"));
+		}
 	}
-	return FText::FromString(FString::Printf(TEXT("%s\n%s%d шт. × %.3g кг = %.2f кг\nЛКМ — переложить, ПКМ — повернуть%s"),
+
+	return FText::FromString(FString::Printf(TEXT("%s\n%s%d шт. × %.3g кг = %.2f кг\n%s"),
 		*Definition.DisplayName.ToString(), Stats.IsEmpty() ? TEXT("") : *(Stats + TEXT("\n")),
-		Entry.Count, Definition.WeightKg, StackWeight, *UseHint));
+		Entry.Count, Definition.WeightKg, StackWeight, *FString::Join(Hints, TEXT("\n"))));
 }
 
 FReply URubezhInventoryItemWidget::NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
@@ -105,11 +119,9 @@ FReply URubezhInventoryItemWidget::NativeOnMouseButtonDown(const FGeometry& InGe
 
 	if (InMouseEvent.GetEffectingButton() == EKeys::RightMouseButton)
 	{
-		Window->RequestRotate(EntryIndex);
+		Window->QuickMove(Source, EntryIndex);
 		return FReply::Handled();
 	}
-
-	GrabOffset = InGeometry.AbsoluteToLocal(InMouseEvent.GetScreenSpacePosition());
 	return UWidgetBlueprintLibrary::DetectDragIfPressed(InMouseEvent, this, EKeys::LeftMouseButton).NativeReply;
 }
 
@@ -117,16 +129,8 @@ FReply URubezhInventoryItemWidget::NativeOnMouseButtonDoubleClick(const FGeometr
 {
 	if (Window.IsValid() && InMouseEvent.GetEffectingButton() == EKeys::LeftMouseButton)
 	{
-		if (Rubezh::Injuries::IsMedical(Definition))
-		{
-			Window->RequestUse(EntryIndex);
-			return FReply::Handled();
-		}
-		if (Definition.EquipSlot != ERubezhEquipSlot::None)
-		{
-			Window->RequestEquip(EntryIndex);
-			return FReply::Handled();
-		}
+		Window->Activate(Source, EntryIndex);
+		return FReply::Handled();
 	}
 	return Super::NativeOnMouseButtonDoubleClick(InGeometry, InMouseEvent);
 }
@@ -134,15 +138,14 @@ FReply URubezhInventoryItemWidget::NativeOnMouseButtonDoubleClick(const FGeometr
 void URubezhInventoryItemWidget::NativeOnDragDetected(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent, UDragDropOperation*& OutOperation)
 {
 	URubezhInventoryItemWidget* DragVisual = CreateWidget<URubezhInventoryItemWidget>(GetOwningPlayer(), GetClass());
-	DragVisual->Setup(nullptr, EntryIndex, Entry, Definition);
+	DragVisual->Setup(nullptr, Source, EntryIndex, Entry, Definition);
 
 	URubezhInventoryDragOperation* Operation = NewObject<URubezhInventoryDragOperation>(this);
+	Operation->Source = Source;
 	Operation->EntryIndex = EntryIndex;
-	Operation->bRotated = Entry.bRotated;
-	Operation->Footprint = GetFootprint();
-	Operation->GrabOffset = GrabOffset;
+	Operation->ItemId = Entry.ItemId;
 	Operation->DefaultDragVisual = DragVisual;
-	Operation->Pivot = EDragPivot::MouseDown;
+	Operation->Pivot = EDragPivot::CenterCenter;
 	OutOperation = Operation;
 
 	SetRenderOpacity(Rubezh::InventoryStyle::DraggedItemOpacity);

@@ -1,6 +1,6 @@
 // РУБЕЖ: Земля после разлома
 // Правила снаряжения: надеть/снять, защита по частям тела, рюкзак. Только данные и математика — проверяется тестами.
-// Характеристики предметов — в data/items.csv (EquipSlot, Protection, BleedProtection, Warmth, BackpackWidth, BackpackHeight, CarryBonusKg).
+// Характеристики предметов — в data/items.csv (EquipSlot, Protection, BleedProtection, Warmth, BackpackSlots, CarryBonusKg).
 
 #pragma once
 
@@ -40,8 +40,8 @@ namespace Rubezh::Equipment
 
 	RUBEZHCORERUNTIME_API FProtection GetProtection(const FEquipped& Equipped, ERubezhBodyZone Zone, FRubezhItemLookup Lookup);
 
-	/** Размер сетки: рюкзака или, если его нет, карманов. */
-	RUBEZHCORERUNTIME_API FIntPoint GetGridSize(const FEquipped& Equipped, FRubezhItemLookup Lookup, FIntPoint PocketsSize);
+	/** Сколько ячеек: в рюкзаке или, если его нет, в карманах. */
+	RUBEZHCORERUNTIME_API int32 GetSlotCount(const FEquipped& Equipped, FRubezhItemLookup Lookup, int32 PocketSlots);
 
 	RUBEZHCORERUNTIME_API float GetCarryBonusKg(const FEquipped& Equipped, FRubezhItemLookup Lookup);
 	RUBEZHCORERUNTIME_API float GetWeight(const FEquipped& Equipped, FRubezhItemLookup Lookup);
@@ -54,24 +54,39 @@ namespace Rubezh::Equipment
 		NotWearable,	// предмет не надевается
 		Missing,		// нет такого предмета или слот пуст
 		WontFit,		// вещи не влезут в новый рюкзак (или в карманы)
-		NoRoom			// снятому предмету нет места в сетке
+		NoRoom,			// снятому предмету нет свободной ячейки
+		SlotTaken		// слот занят (брошенный рюкзак можно надеть, только сняв свой)
 	};
 
 	RUBEZHCORERUNTIME_API const TCHAR* Describe(EResult Result);
 
 	/**
-	 * Надеть предмет из сетки. Что было в слоте — отправляется в сетку. Если меняется рюкзак, сетка меняет размер.
+	 * Надеть предмет из рюкзака. Что было в слоте — отправляется в рюкзак. Если меняется рюкзак, меняется число ячеек.
 	 * При неудаче Grid и Equipped не меняются.
 	 */
-	RUBEZHCORERUNTIME_API EResult Equip(FRubezhInventoryGrid& Grid, FEquipped& Equipped, int32 EntryIndex, FRubezhItemLookup Lookup, FIntPoint PocketsSize);
+	RUBEZHCORERUNTIME_API EResult Equip(FRubezhInventoryGrid& Grid, FEquipped& Equipped, int32 EntryIndex, FRubezhItemLookup Lookup, int32 PocketSlots);
 
-	/** Снять в сетку: на указанное место (Position) или куда влезет (Position не задан). */
+	/** Снять в рюкзак: в ячейку TargetSlot или (не задана) куда влезет. */
 	RUBEZHCORERUNTIME_API EResult Unequip(FRubezhInventoryGrid& Grid, FEquipped& Equipped, ERubezhEquipSlot Slot,
-		TOptional<FIntPoint> Position, bool bRotated, FRubezhItemLookup Lookup, FIntPoint PocketsSize);
+		TOptional<int32> TargetSlot, FRubezhItemLookup Lookup, int32 PocketSlots);
 
 	/** Снять, никуда не кладя (чтобы бросить на землю). OutItemId — что сняли. */
 	RUBEZHCORERUNTIME_API EResult TakeOff(FRubezhInventoryGrid& Grid, FEquipped& Equipped, ERubezhEquipSlot Slot,
-		FRubezhItemLookup Lookup, FIntPoint PocketsSize, FName& OutItemId);
+		FRubezhItemLookup Lookup, int32 PocketSlots, FName& OutItemId);
+
+	/**
+	 * Сбросить рюкзак вместе с содержимым: всё, что в нём лежит, уходит в OutContents, у игрока остаются пустые карманы.
+	 * Missing — рюкзака нет.
+	 */
+	RUBEZHCORERUNTIME_API EResult DropBag(FRubezhInventoryGrid& Grid, FEquipped& Equipped, int32 PocketSlots,
+		FName& OutBagId, FRubezhInventoryGrid& OutContents);
+
+	/**
+	 * Надеть брошенный рюкзак вместе с его содержимым; то, что лежало в карманах, перекладывается в него.
+	 * SlotTaken — свой рюкзак ещё надет; WontFit — вещи из карманов не влезут.
+	 */
+	RUBEZHCORERUNTIME_API EResult WearBag(FRubezhInventoryGrid& Grid, FEquipped& Equipped, FName BagId,
+		const FRubezhInventoryGrid& BagContents, FRubezhItemLookup Lookup);
 
 	/** Характеристики предмета одной-двумя строками для подсказки. Пусто — не снаряжение. */
 	RUBEZHCORERUNTIME_API FString DescribeStats(const FRubezhItemDefinition& Item);

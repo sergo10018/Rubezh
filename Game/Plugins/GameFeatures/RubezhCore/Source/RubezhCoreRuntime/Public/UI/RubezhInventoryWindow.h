@@ -4,26 +4,25 @@
 
 #include "CommonActivatableWidget.h"
 #include "Items/RubezhEquipSlot.h"
+#include "UI/RubezhInventoryItemWidget.h"
 
 #include "RubezhInventoryWindow.generated.h"
 
-class UBorder;
-class UCanvasPanel;
+class UButton;
 class UProgressBar;
 class URubezhEquipmentSlotWidget;
-struct FRubezhItemDefinition;
 class URubezhInventoryComponent;
-class URubezhInventoryDragOperation;
-class USizeBox;
+class URubezhSlotGridWidget;
 class UTextBlock;
+class UVerticalBox;
+struct FRubezhItemDefinition;
 
 /**
- * Окно рюкзака: слева снаряжение (голова, бронежилет, одежда, рюкзак) и суммарная защита,
- * справа сетка с предметами, вес и уровень перегруза.
- * Открывается на слое UI.Layer.GameMenu (курсор включается, игра не получает ввод),
- * закрывается клавишей инвентаря или Esc. Перекладывание — запрос к серверу (ServerMoveEntry),
- * предмет, отпущенный за пределами сетки, выбрасывается на землю (ServerDropEntry).
- * Окно перерисовывается, когда сервер прислал новое содержимое.
+ * Окно рюкзака: слева снаряжение и суммарная защита, в середине ячейки рюкзака, вес и перегруз,
+ * справа — что обыскиваем (ящик, тело, брошенный рюкзак), если обыск идёт.
+ * Открывается на слое UI.Layer.GameMenu (курсор включается, игра не получает ввод), закрывается клавишей
+ * инвентаря или Esc. Все изменения — запросы к серверу; окно перерисовывается, когда сервер прислал новое содержимое.
+ * Отпущенное за окном выбрасывается на землю.
  */
 UCLASS()
 class RUBEZHCORERUNTIME_API URubezhInventoryWindow : public UCommonActivatableWidget
@@ -33,14 +32,25 @@ class RUBEZHCORERUNTIME_API URubezhInventoryWindow : public UCommonActivatableWi
 public:
 	URubezhInventoryWindow(const FObjectInitializer& ObjectInitializer);
 
-	void RequestRotate(int32 EntryIndex);
-	void RequestUse(int32 EntryIndex);
+	/** ПКМ по плитке: переложить между рюкзаком и обыскиваемым. */
+	void QuickMove(ERubezhItemSource Source, int32 EntryIndex);
+
+	/** Двойной клик по плитке: применить или надеть (рюкзак), забрать (обыск). */
+	void Activate(ERubezhItemSource Source, int32 EntryIndex);
+
+	/** Предмет отпущен над ячейками Target: в ячейку Cell (INDEX_NONE — куда влезет). */
+	void HandleGridDrop(ERubezhItemSource Target, int32 Cell, const URubezhInventoryDragOperation& Operation);
+
 	void RequestEquip(int32 EntryIndex);
-	/** Снять в сетку: на клетку Cell или (без неё) куда влезет. */
-	void RequestUnequip(ERubezhEquipSlot EquipSlot, TOptional<FIntPoint> Cell, bool bRotated);
+	/** Снять в рюкзак: в ячейку TargetSlot или (не задана) куда влезет. */
+	void RequestUnequip(ERubezhEquipSlot EquipSlot, TOptional<int32> TargetSlot);
+
+	bool IsLootOpen() const;
 	void HideDropPreview();
+	void ShowGroundHint(bool bShow);
 	void RefreshNow() { Refresh(); }
 
+	/** Описание предмета в стопке рюкзака. */
 	const FRubezhItemDefinition* FindEntryDefinition(int32 EntryIndex) const;
 
 protected:
@@ -59,12 +69,26 @@ private:
 	UFUNCTION()
 	void Refresh();
 
+	UFUNCTION()
+	void HandleTakeAllClicked();
+
+	UFUNCTION()
+	void HandleWearBagClicked();
+
 	void BuildLayout();
-	void RebuildCells(FIntPoint GridSize);
+	UWidget* BuildEquipmentColumn();
+	UWidget* BuildBackpackColumn();
+	UWidget* BuildLootColumn();
+	UButton* MakeButton(const FString& Label);
+
 	void RefreshWeight(const URubezhInventoryComponent& Inventory);
-	void RefreshItems(const URubezhInventoryComponent& Inventory);
 	void RefreshEquipment(const URubezhInventoryComponent& Inventory);
-	class UWidget* BuildEquipmentColumn();
+	void RefreshLoot(const URubezhInventoryComponent& Inventory);
+
+	/** Положить стопку рюкзака в обыскиваемое / забрать стопку из обыскиваемого. */
+	void PutIntoLoot(int32 EntryIndex, int32 TargetSlot);
+	void TakeFromLoot(int32 LootEntryIndex, int32 TargetSlot);
+	void RequestUse(int32 EntryIndex);
 
 	/** Показать причину отказа красным в строке подсказки на несколько секунд. */
 	void ShowError(const FString& Message);
@@ -77,15 +101,7 @@ private:
 
 	URubezhInventoryComponent* FindInventory() const;
 
-	/** Курсор над сеткой? */
-	bool IsOverGrid(const FDragDropEvent& DragDropEvent) const;
-	void ShowDropToGroundHint(bool bShow);
-
-	/** Клетка, куда ляжет левый верхний угол предмета, и можно ли его туда положить. */
-	bool EvaluateDrop(const FDragDropEvent& DragDropEvent, const URubezhInventoryDragOperation& Operation, FIntPoint& OutCell) const;
-
 	TWeakObjectPtr<URubezhInventoryComponent> BoundInventory;
-	FIntPoint BuiltGridSize = FIntPoint::ZeroValue;
 
 	UPROPERTY(Transient)
 	TObjectPtr<UTextBlock> HintLine;
@@ -109,17 +125,17 @@ private:
 	TObjectPtr<UProgressBar> WeightBar;
 
 	UPROPERTY(Transient)
-	TObjectPtr<USizeBox> GridSizeBox;
+	TObjectPtr<URubezhSlotGridWidget> BackpackGrid;
 
 	UPROPERTY(Transient)
-	TObjectPtr<UCanvasPanel> GridCanvas;
+	TObjectPtr<UWidget> LootColumn;
 
 	UPROPERTY(Transient)
-	TObjectPtr<UBorder> DropPreview;
+	TObjectPtr<UTextBlock> LootTitle;
 
 	UPROPERTY(Transient)
-	TArray<TObjectPtr<UWidget>> CellWidgets;
+	TObjectPtr<UButton> WearBagButton;
 
 	UPROPERTY(Transient)
-	TArray<TObjectPtr<UWidget>> ItemWidgets;
+	TObjectPtr<URubezhSlotGridWidget> LootGrid;
 };
