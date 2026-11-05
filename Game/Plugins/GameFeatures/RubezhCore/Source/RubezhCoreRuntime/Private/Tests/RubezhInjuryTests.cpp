@@ -67,6 +67,9 @@ bool FRubezhInjuryHitTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("Кровотечение примерно в 30 % попаданий"), Frequency(Light, ERubezhInjury::Bleeding), BleedingChance, 0.02f);
 	TestEqual(TEXT("Слабое попадание не даёт сильного кровотечения"), Frequency(Light, ERubezhInjury::HeavyBleeding), 0.0f);
 	TestEqual(TEXT("Мощное попадание — сильное кровотечение примерно в 10 %"), Frequency(HeavyLeg, ERubezhInjury::HeavyBleeding), HeavyBleedingChance, 0.02f);
+	TestEqual(TEXT("Пистолет в корпус (28) — без сильного кровотечения"), Frequency(FHitInfo{ 28.0f, false }, ERubezhInjury::HeavyBleeding), 0.0f);
+	TestEqual(TEXT("Ровно на пороге (30) — сильное кровотечение возможно"), Frequency(FHitInfo{ 30.0f, false }, ERubezhInjury::HeavyBleeding), HeavyBleedingChance, 0.02f);
+	TestEqual(TEXT("Автомат в корпус (34) — сильное кровотечение возможно"), Frequency(FHitInfo{ 34.0f, false }, ERubezhInjury::HeavyBleeding), HeavyBleedingChance, 0.02f);
 	TestEqual(TEXT("Попадание не в ногу не ломает ногу"), Frequency(Light, ERubezhInjury::LegFracture), 0.0f);
 	TestEqual(TEXT("Попадание в ногу — перелом примерно в 15 %"), Frequency(HeavyLeg, ERubezhInjury::LegFracture), LegFractureChance, 0.02f);
 

@@ -16,8 +16,8 @@ namespace Rubezh::Injuries
 	inline constexpr float HeavyBleedingChance = 0.10f;	// только от мощного попадания
 	inline constexpr float LegFractureChance = 0.15f;	// только при попадании в ногу
 
-	// Мощное попадание («крупный калибр, дробь»): пока своего оружия нет, считаем по урону одного попадания.
-	inline constexpr float HeavyHitMinDamage = 25.0f;
+	// Мощное попадание: считаем по урону одного попадания после брони (решение лида, GDD «Системы прототипа» §3).
+	inline constexpr float HeavyHitMinDamage = 30.0f;
 
 	// Падение с высоты больше 4 м ломает ногу.
 	inline constexpr float FallFractureHeightCm = 400.0f;
