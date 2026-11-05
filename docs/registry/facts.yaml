@@ -123,14 +123,17 @@ rules:
     added: 2026-11-05
 
   - name: Слоты снаряжения
-    value: "голова, бронежилет, одежда верх, одежда низ, рюкзак"
+    value: "сделаны: голова, бронежилет, одежда верх, одежда низ, рюкзак; в планах прототипа: основное оружие ×2, пистолет; после прототипа: разгрузка"
     status: active
-    source: Game/Plugins/GameFeatures/RubezhCore/Source/RubezhCoreRuntime/Public/Items/RubezhEquipment.h
+    source: docs/gdd/01_Системы_прототипа.md#2
     referenced_by:
+      - Game/Plugins/GameFeatures/RubezhCore/Source/RubezhCoreRuntime/Public/Items/RubezhEquipment.h
       - CLAUDE.md
-      - docs/gdd/01_Системы_прототипа.md#2
-    conflict: "В GDD также есть основное оружие ×2, пистолет и разгрузка. Нужно решить: это ещё не сделанная часть или устаревший список."
+      - docs/gdd/00_Core_loop.md#4
+      - docs/01_Канон.md#7
+    note: "Решение лида: оружейные слоты — несделанная часть задачи «4 оружия», разгрузка отложена. Пока их нет в коде, это не расхождение."
     added: 2026-11-05
+    revised: 2026-11-05
 
 # ─── ПРЕДМЕТЫ ──────────────────────────────────────────────
 items:
