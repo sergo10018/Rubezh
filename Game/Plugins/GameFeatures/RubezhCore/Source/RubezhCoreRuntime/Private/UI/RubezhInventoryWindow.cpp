@@ -91,10 +91,9 @@ void URubezhInventoryWindow::BuildLayout()
 	Panel->SetContent(Column);
 
 	Column->AddChildToVerticalBox(MakeText(*WidgetTree, FText::FromString(TEXT("Рюкзак")), TitleFontSize));
-	const FString CloseKey = GetDefault<URubezhSettings>()->InventoryKey.GetDisplayName().ToString();
-	Column->AddChildToVerticalBox(MakeText(*WidgetTree,
-		FText::FromString(FString::Printf(TEXT("ЛКМ — переложить · ПКМ — повернуть · %s или Esc — закрыть"), *CloseKey)),
-		TextFontSize - 2, HintText));
+	HintLine = MakeText(*WidgetTree, FText::GetEmpty(), TextFontSize - 2, HintText);
+	Column->AddChildToVerticalBox(HintLine);
+	ShowDropToGroundHint(false);
 	AddSpacer(*WidgetTree, *Column, SectionSpacing);
 
 	WeightText = MakeText(*WidgetTree, FText::GetEmpty(), TextFontSize);
@@ -315,6 +314,14 @@ bool URubezhInventoryWindow::NativeOnDragOver(const FGeometry& InGeometry, const
 	}
 
 	using namespace Rubezh::InventoryStyle;
+	if (!IsOverGrid(InDragDropEvent))
+	{
+		HideDropPreview();
+		ShowDropToGroundHint(true);
+		return true;
+	}
+	ShowDropToGroundHint(false);
+
 	FIntPoint Cell;
 	const bool bFree = EvaluateDrop(InDragDropEvent, *Operation, Cell);
 
@@ -343,6 +350,13 @@ bool URubezhInventoryWindow::NativeOnDrop(const FGeometry& InGeometry, const FDr
 
 	const URubezhInventoryDragOperation* Operation = Cast<URubezhInventoryDragOperation>(InOperation);
 	URubezhInventoryComponent* Inventory = BoundInventory.Get();
+	if (Operation && Inventory && !IsOverGrid(InDragDropEvent))
+	{
+		Inventory->ServerDropEntry(Operation->EntryIndex);
+		Refresh();
+		return true;
+	}
+
 	FIntPoint Cell;
 	if (!Operation || !Inventory || !EvaluateDrop(InDragDropEvent, *Operation, Cell))
 	{
@@ -367,4 +381,31 @@ void URubezhInventoryWindow::HideDropPreview()
 	{
 		DropPreview->SetVisibility(ESlateVisibility::Collapsed);
 	}
+	ShowDropToGroundHint(false);
+}
+
+bool URubezhInventoryWindow::IsOverGrid(const FDragDropEvent& DragDropEvent) const
+{
+	return GridCanvas->GetCachedGeometry().IsUnderLocation(DragDropEvent.GetScreenSpacePosition());
+}
+
+void URubezhInventoryWindow::ShowDropToGroundHint(bool bShow)
+{
+	using namespace Rubezh::InventoryStyle;
+	if (!HintLine)
+	{
+		return;
+	}
+
+	if (bShow)
+	{
+		HintLine->SetText(FText::FromString(TEXT("Отпустите — выбросить на землю")));
+		HintLine->SetColorAndOpacity(FSlateColor(WarningText));
+		return;
+	}
+
+	const FString CloseKey = GetDefault<URubezhSettings>()->InventoryKey.GetDisplayName().ToString();
+	HintLine->SetText(FText::FromString(FString::Printf(
+		TEXT("ЛКМ — переложить · ПКМ — повернуть · перетащить за сетку — выбросить · %s или Esc — закрыть"), *CloseKey)));
+	HintLine->SetColorAndOpacity(FSlateColor(HintText));
 }

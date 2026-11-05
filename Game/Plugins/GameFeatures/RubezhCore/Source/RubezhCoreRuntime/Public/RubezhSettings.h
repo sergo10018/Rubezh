@@ -28,5 +28,9 @@ public:
 	UPROPERTY(Config, EditAnywhere, Category = "Input")
 	FKey InventoryKey = EKeys::I;
 
+	// Клавиша взаимодействия: подобрать предмет, на который смотришь.
+	UPROPERTY(Config, EditAnywhere, Category = "Input")
+	FKey InteractKey = EKeys::E;
+
 	virtual FName GetCategoryName() const override { return TEXT("Game"); }
 };

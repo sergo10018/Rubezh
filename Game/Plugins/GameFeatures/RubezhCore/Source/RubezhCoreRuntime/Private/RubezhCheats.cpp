@@ -2,9 +2,11 @@
 // Отладочные консольные команды для плейтеста. В сборку Shipping не попадают.
 
 #include "Engine/World.h"
+#include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerController.h"
 #include "HAL/IConsoleManager.h"
 #include "Items/RubezhInventoryComponent.h"
+#include "Items/RubezhWorldItem.h"
 #include "RubezhCoreRuntimeModule.h"
 
 #if !UE_BUILD_SHIPPING
@@ -57,6 +59,24 @@ namespace
 		UE_LOG(LogRubezh, Display, TEXT("Rubezh.Take %s: убрано %d, вес %.2f кг"), *Args[0], Removed, Inventory->GetTotalWeight());
 	}
 
+	void SpawnItem(const TArray<FString>& Args, UWorld* World)
+	{
+		APlayerController* Controller = (World && World->GetNetMode() != NM_Client) ? World->GetFirstPlayerController() : nullptr;
+		APawn* Pawn = Controller ? Controller->GetPawn() : nullptr;
+		if (!Pawn || Args.Num() < 1)
+		{
+			UE_LOG(LogRubezh, Display, TEXT("Rubezh.Spawn <ItemId> [Count] — положить предмет на землю перед собой (одиночная игра или хост)"));
+			return;
+		}
+
+		const int32 Count = Args.Num() > 1 ? FCString::Atoi(*Args[1]) : 1;
+		const ARubezhWorldItem* Item = ARubezhWorldItem::SpawnInFrontOf(*Pawn, FName(*Args[0]), Count);
+		if (Item && !Item->FindDefinition())
+		{
+			UE_LOG(LogRubezh, Warning, TEXT("Rubezh.Spawn: предмета '%s' нет в таблице — лежит серая коробка"), *Args[0]);
+		}
+	}
+
 	void PrintInventory(const TArray<FString>& Args, UWorld* World)
 	{
 		const URubezhInventoryComponent* Inventory = FindLocalInventory(World);
@@ -83,6 +103,10 @@ namespace
 	FAutoConsoleCommandWithWorldAndArgs TakeCommand(
 		TEXT("Rubezh.Take"), TEXT("Убрать предмет из рюкзака: Rubezh.Take <ItemId> [Count]"),
 		FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&TakeItem));
+
+	FAutoConsoleCommandWithWorldAndArgs SpawnCommand(
+		TEXT("Rubezh.Spawn"), TEXT("Положить предмет на землю перед собой: Rubezh.Spawn <ItemId> [Count]"),
+		FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&SpawnItem));
 
 	FAutoConsoleCommandWithWorldAndArgs InventoryCommand(
 		TEXT("Rubezh.Inventory"), TEXT("Показать содержимое рюкзака и вес"),

@@ -7,6 +7,7 @@
 #include "Engine/DataTable.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/Controller.h"
+#include "Items/RubezhWorldItem.h"
 #include "Movement/RubezhMovementSpeed.h"
 #include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerState.h"
@@ -156,6 +157,27 @@ void URubezhInventoryComponent::ServerMoveEntry_Implementation(int32 EntryIndex,
 	{
 		HandleGridChanged();
 	}
+}
+
+void URubezhInventoryComponent::ServerDropEntry_Implementation(int32 EntryIndex)
+{
+	const APlayerState* PlayerState = Cast<APlayerState>(GetOwner());
+	APawn* Pawn = PlayerState ? PlayerState->GetPawn() : nullptr;
+	if (!Pawn || !Grid.GetEntries().IsValidIndex(EntryIndex))
+	{
+		return;
+	}
+
+	// Сначала кладём на землю, потом убираем из рюкзака — если положить не вышло, вещь не пропадёт.
+	const FRubezhInventoryEntry Entry = Grid.GetEntries()[EntryIndex];
+	if (!ARubezhWorldItem::SpawnInFrontOf(*Pawn, Entry.ItemId, Entry.Count))
+	{
+		return;
+	}
+
+	FRubezhInventoryEntry Removed;
+	Grid.RemoveEntry(EntryIndex, Removed);
+	HandleGridChanged();
 }
 
 float URubezhInventoryComponent::GetTotalWeight() const

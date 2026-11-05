@@ -58,6 +58,9 @@ struct RUBEZHCORERUNTIME_API FRubezhInventoryGrid
 	/** Убрать штуки предмета, начиная с последней стопки. Возвращает, сколько убрано. */
 	int32 RemoveItem(FName ItemId, int32 Count);
 
+	/** Вынуть стопку целиком (например, чтобы выбросить). false — такой стопки нет. */
+	bool RemoveEntry(int32 EntryIndex, FRubezhInventoryEntry& OutRemoved);
+
 	/** Переложить стопку на новое место (с поворотом или без). false — место занято или вне сетки. */
 	bool MoveEntry(int32 EntryIndex, FIntPoint NewPosition, bool bRotated, FRubezhItemLookup Lookup);
 

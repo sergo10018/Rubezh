@@ -42,6 +42,10 @@ public:
 	UFUNCTION(Server, Reliable, BlueprintCallable, Category = "Rubezh|Inventory")
 	void ServerMoveEntry(int32 EntryIndex, FIntPoint NewPosition, bool bRotated);
 
+	/** Клиент просит выбросить стопку на землю перед персонажем. */
+	UFUNCTION(Server, Reliable, BlueprintCallable, Category = "Rubezh|Inventory")
+	void ServerDropEntry(int32 EntryIndex);
+
 	UFUNCTION(BlueprintPure, Category = "Rubezh|Inventory")
 	int32 CountItem(FName ItemId) const { return Grid.CountItem(ItemId); }
 

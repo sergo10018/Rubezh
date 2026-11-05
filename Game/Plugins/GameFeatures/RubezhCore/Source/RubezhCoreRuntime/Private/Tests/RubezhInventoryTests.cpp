@@ -1,6 +1,7 @@
 // РУБЕЖ: Земля после разлома
 
 #include "Items/RubezhInventoryGrid.h"
+#include "Items/RubezhPickupRules.h"
 #include "Misc/AutomationTest.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
@@ -102,6 +103,53 @@ bool FRubezhInventoryMoveTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("Автомат можно повернуть, если место есть"), Grid.MoveEntry(1, FIntPoint(4, 0), true, Lookup));
 	TestFalse(TEXT("Нельзя вынести стопку за сетку"), Grid.MoveEntry(1, FIntPoint(5, 0), true, Lookup));
 	TestFalse(TEXT("Несуществующая стопка"), Grid.MoveEntry(7, FIntPoint(0, 0), false, Lookup));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRubezhInventoryRemoveEntryTest, "Rubezh.Inventory.Grid.RemoveEntry", InventoryTestFlags)
+
+bool FRubezhInventoryRemoveEntryTest::RunTest(const FString& Parameters)
+{
+	const FTestCatalog Catalog;
+	auto Lookup = [&Catalog](FName Id) { return Catalog.Find(Id); };
+
+	FRubezhInventoryGrid Grid(FIntPoint(6, 8));
+	Grid.AddItem(TEXT("ammo"), Catalog.Ammo, 90, Lookup);		// стопки 60 и 30
+	Grid.AddItem(TEXT("battery"), Catalog.Battery, 1, Lookup);
+
+	FRubezhInventoryEntry Removed;
+	TestTrue(TEXT("Вынули вторую стопку патронов"), Grid.RemoveEntry(1, Removed));
+	TestEqual(TEXT("…это патроны"), Removed.ItemId, FName(TEXT("ammo")));
+	TestEqual(TEXT("…все 30 штук"), Removed.Count, 30);
+	TestEqual(TEXT("Патронов осталось 60"), Grid.CountItem(TEXT("ammo")), 60);
+	TestEqual(TEXT("Аккумулятор на месте"), Grid.CountItem(TEXT("battery")), 1);
+	TestFalse(TEXT("Несуществующая стопка"), Grid.RemoveEntry(5, Removed));
+	TestTrue(TEXT("Место освободилось — туда снова можно положить"), Grid.IsAreaFree(FIntPoint(1, 0), FIntPoint(1, 1), Lookup));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRubezhPickupRulesTest, "Rubezh.Inventory.Pickup.Rules", InventoryTestFlags)
+
+bool FRubezhPickupRulesTest::RunTest(const FString& Parameters)
+{
+	using namespace Rubezh::Pickup;
+
+	const FVector Pawn(0.0f, 0.0f, 90.0f);
+	const FVector Camera(-300.0f, 0.0f, 150.0f);	// камера от третьего лица — за спиной
+	const FVector Forward(1.0f, 0.0f, -0.15f);
+
+	TestTrue(TEXT("Предмет у ног — дотянуться можно"), IsWithinReach(Pawn, FVector(100.0f, 0.0f, 0.0f), false));
+	TestFalse(TEXT("Предмет в 3 м — нельзя"), IsWithinReach(Pawn, FVector(300.0f, 0.0f, 0.0f), false));
+	TestTrue(TEXT("Сервер прощает небольшое расхождение"), IsWithinReach(Pawn, FVector(240.0f, 0.0f, 90.0f), true));
+	TestFalse(TEXT("…но не подбор через полкарты"), IsWithinReach(Pawn, FVector(1000.0f, 0.0f, 0.0f), true));
+
+	TestTrue(TEXT("Предмет перед персонажем — цель"), ScoreCandidate(Camera, Forward, Pawn, FVector(120.0f, 0.0f, 0.0f)).IsSet());
+	TestFalse(TEXT("Предмет за спиной — не цель"), ScoreCandidate(Camera, Forward, Pawn, FVector(-150.0f, 0.0f, 0.0f)).IsSet());
+	TestFalse(TEXT("Предмет далеко впереди — не цель"), ScoreCandidate(Camera, Forward, Pawn, FVector(600.0f, 0.0f, 0.0f)).IsSet());
+
+	const TOptional<float> Straight = ScoreCandidate(Camera, Forward, Pawn, FVector(120.0f, 0.0f, 0.0f));
+	const TOptional<float> Aside = ScoreCandidate(Camera, Forward, Pawn, FVector(100.0f, 90.0f, 0.0f));
+	TestTrue(TEXT("Предмет прямо по взгляду лучше, чем сбоку"), Straight.IsSet() && Aside.IsSet() && Straight.GetValue() < Aside.GetValue());
 	return true;
 }
 

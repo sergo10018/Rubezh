@@ -1,6 +1,6 @@
 // РУБЕЖ: Земля после разлома
 
-#include "UI/RubezhInventoryInput.h"
+#include "UI/RubezhPlayerInput.h"
 
 #include "Character/LyraHeroComponent.h"
 #include "CommonUIExtensions.h"
@@ -13,12 +13,13 @@
 #include "GameFramework/PlayerController.h"
 #include "InputAction.h"
 #include "InputMappingContext.h"
+#include "Items/RubezhInteractionComponent.h"
 #include "NativeGameplayTags.h"
 #include "RubezhCoreRuntimeModule.h"
 #include "RubezhSettings.h"
 #include "UI/RubezhInventoryWindow.h"
 
-#include UE_INLINE_GENERATED_CPP_BY_NAME(RubezhInventoryInput)
+#include UE_INLINE_GENERATED_CPP_BY_NAME(RubezhPlayerInput)
 
 namespace
 {
@@ -26,16 +27,19 @@ namespace
 	UE_DEFINE_GAMEPLAY_TAG_STATIC(TAG_UI_Layer_GameMenu, "UI.Layer.GameMenu");
 
 	// Выше раскладки Lyra по умолчанию (0), чтобы клавиша не перехватывалась.
-	constexpr int32 InventoryMappingPriority = 1;
+	constexpr int32 PlayerMappingPriority = 1;
 }
 
-void URubezhInventoryInput::Initialize(FSubsystemCollectionBase& Collection)
+void URubezhPlayerInput::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
 
-	ToggleAction = NewObject<UInputAction>(this, TEXT("IA_Rubezh_ToggleInventory"));
-	Mapping = NewObject<UInputMappingContext>(this, TEXT("IMC_Rubezh_Inventory"));
-	Mapping->MapKey(ToggleAction, GetDefault<URubezhSettings>()->InventoryKey);
+	const URubezhSettings* Settings = GetDefault<URubezhSettings>();
+	ToggleInventoryAction = NewObject<UInputAction>(this, TEXT("IA_Rubezh_ToggleInventory"));
+	InteractAction = NewObject<UInputAction>(this, TEXT("IA_Rubezh_Interact"));
+	Mapping = NewObject<UInputMappingContext>(this, TEXT("IMC_Rubezh_Player"));
+	Mapping->MapKey(ToggleInventoryAction, Settings->InventoryKey);
+	Mapping->MapKey(InteractAction, Settings->InteractKey);
 
 	Collection.InitializeDependency<UGameFrameworkComponentManager>();
 	if (UGameFrameworkComponentManager* Manager = GetGameInstance()->GetSubsystem<UGameFrameworkComponentManager>())
@@ -45,13 +49,13 @@ void URubezhInventoryInput::Initialize(FSubsystemCollectionBase& Collection)
 	}
 }
 
-void URubezhInventoryInput::Deinitialize()
+void URubezhPlayerInput::Deinitialize()
 {
 	PawnExtensionHandle.Reset();
 	Super::Deinitialize();
 }
 
-void URubezhInventoryInput::HandlePawnExtension(AActor* Actor, FName EventName)
+void URubezhPlayerInput::HandlePawnExtension(AActor* Actor, FName EventName)
 {
 	if (EventName != ULyraHeroComponent::NAME_BindInputsNow)
 	{
@@ -65,20 +69,31 @@ void URubezhInventoryInput::HandlePawnExtension(AActor* Actor, FName EventName)
 	UEnhancedInputComponent* InputComponent = Pawn ? Cast<UEnhancedInputComponent>(Pawn->InputComponent) : nullptr;
 	if (!InputSubsystem || !InputComponent)
 	{
-		UE_LOG(LogRubezh, Warning, TEXT("Клавиша рюкзака не подключена: у персонажа нет Enhanced Input"));
+		UE_LOG(LogRubezh, Warning, TEXT("Клавиши Рубежа не подключены: у персонажа нет Enhanced Input"));
 		return;
 	}
 
-	InputSubsystem->AddMappingContext(Mapping, InventoryMappingPriority);
-	InputComponent->BindAction(ToggleAction, ETriggerEvent::Started, this, &ThisClass::HandleToggleInput);
+	InputSubsystem->AddMappingContext(Mapping, PlayerMappingPriority);
+	InputComponent->BindAction(ToggleInventoryAction, ETriggerEvent::Started, this, &ThisClass::HandleToggleInput);
+	InputComponent->BindAction(InteractAction, ETriggerEvent::Started, this, &ThisClass::HandleInteractInput);
 }
 
-void URubezhInventoryInput::HandleToggleInput()
+void URubezhPlayerInput::HandleToggleInput()
 {
 	ToggleInventory(GetGameInstance()->GetFirstLocalPlayerController());
 }
 
-void URubezhInventoryInput::ToggleInventory(APlayerController* PlayerController)
+void URubezhPlayerInput::HandleInteractInput()
+{
+	const APlayerController* PlayerController = GetGameInstance()->GetFirstLocalPlayerController();
+	const APawn* Pawn = PlayerController ? PlayerController->GetPawn() : nullptr;
+	if (URubezhInteractionComponent* Interaction = Pawn ? Pawn->FindComponentByClass<URubezhInteractionComponent>() : nullptr)
+	{
+		Interaction->Interact();
+	}
+}
+
+void URubezhPlayerInput::ToggleInventory(APlayerController* PlayerController)
 {
 	if (URubezhInventoryWindow* Window = OpenWindow.Get(); Window && Window->IsActivated())
 	{

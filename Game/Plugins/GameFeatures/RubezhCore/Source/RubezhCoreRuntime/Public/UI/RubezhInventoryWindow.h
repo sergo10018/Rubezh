@@ -18,7 +18,8 @@ class UTextBlock;
  * Окно рюкзака: сетка с предметами, вес и уровень перегруза.
  * Открывается на слое UI.Layer.GameMenu (курсор включается, игра не получает ввод),
  * закрывается клавишей инвентаря или Esc. Перекладывание — запрос к серверу (ServerMoveEntry),
- * окно перерисовывается, когда сервер прислал новое содержимое.
+ * предмет, отпущенный за пределами сетки, выбрасывается на землю (ServerDropEntry).
+ * Окно перерисовывается, когда сервер прислал новое содержимое.
  */
 UCLASS()
 class RUBEZHCORERUNTIME_API URubezhInventoryWindow : public UCommonActivatableWidget
@@ -54,11 +55,18 @@ private:
 
 	URubezhInventoryComponent* FindInventory() const;
 
+	/** Курсор над сеткой? Если нет — отпущенный предмет выбрасывается. */
+	bool IsOverGrid(const FDragDropEvent& DragDropEvent) const;
+	void ShowDropToGroundHint(bool bShow);
+
 	/** Клетка, куда ляжет левый верхний угол предмета, и можно ли его туда положить. */
 	bool EvaluateDrop(const FDragDropEvent& DragDropEvent, const URubezhInventoryDragOperation& Operation, FIntPoint& OutCell) const;
 
 	TWeakObjectPtr<URubezhInventoryComponent> BoundInventory;
 	FIntPoint BuiltGridSize = FIntPoint::ZeroValue;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UTextBlock> HintLine;
 
 	UPROPERTY(Transient)
 	TObjectPtr<UTextBlock> WeightText;

@@ -127,6 +127,18 @@ int32 FRubezhInventoryGrid::RemoveItem(FName ItemId, int32 Count)
 	return Removed;
 }
 
+bool FRubezhInventoryGrid::RemoveEntry(int32 EntryIndex, FRubezhInventoryEntry& OutRemoved)
+{
+	if (!Entries.IsValidIndex(EntryIndex))
+	{
+		return false;
+	}
+
+	OutRemoved = Entries[EntryIndex];
+	Entries.RemoveAt(EntryIndex);
+	return true;
+}
+
 bool FRubezhInventoryGrid::MoveEntry(int32 EntryIndex, FIntPoint NewPosition, bool bRotated, FRubezhItemLookup Lookup)
 {
 	if (!Entries.IsValidIndex(EntryIndex))

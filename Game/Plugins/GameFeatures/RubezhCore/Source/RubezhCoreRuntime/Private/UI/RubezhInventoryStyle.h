@@ -26,6 +26,14 @@ namespace Rubezh::InventoryStyle
 	inline const FLinearColor DropAllowed(0.2f, 0.8f, 0.25f, 0.35f);
 	inline const FLinearColor DropBlocked(0.9f, 0.15f, 0.1f, 0.35f);
 	inline const FLinearColor HintText(0.6f, 0.6f, 0.55f, 1.0f);
+	inline const FLinearColor WarningText(0.9f, 0.3f, 0.2f, 1.0f);
+
+	// Подсказка подбора предмета с земли.
+	inline constexpr int32 PromptNameFontSize = 14;
+	inline constexpr int32 PromptActionFontSize = 12;
+	inline constexpr float PromptPadding = 8.0f;
+	inline constexpr float PromptScreenHeight = 0.56f;	// доля высоты экрана: чуть ниже прицела
+	inline const FLinearColor PromptBackground(0.0f, 0.0f, 0.0f, 0.6f);
 
 	inline FLinearColor GetCategoryColor(ERubezhItemCategory Category)
 	{
