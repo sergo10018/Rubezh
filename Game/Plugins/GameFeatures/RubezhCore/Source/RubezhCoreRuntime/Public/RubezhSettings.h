@@ -32,5 +32,9 @@ public:
 	UPROPERTY(Config, EditAnywhere, Category = "Input")
 	FKey InteractKey = EKeys::E;
 
+	// Быстрое лечение: применить самое нужное из рюкзака (жгут, бинт, шина, обезболивающее, аптечка).
+	UPROPERTY(Config, EditAnywhere, Category = "Input")
+	FKey HealKey = EKeys::H;
+
 	virtual FName GetCategoryName() const override { return TEXT("Game"); }
 };

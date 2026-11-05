@@ -5,6 +5,7 @@
 #include "Components/GameFrameworkComponentManager.h"
 #include "Engine/GameInstance.h"
 #include "Character/LyraCharacter.h"
+#include "Health/RubezhInjuryComponent.h"
 #include "Items/RubezhInteractionComponent.h"
 #include "Items/RubezhInventoryComponent.h"
 #include "Player/LyraPlayerState.h"
@@ -21,6 +22,7 @@ void URubezhComponentInjector::Initialize(FSubsystemCollectionBase& Collection)
 		// Компонент создаётся и на сервере, и у клиентов с одинаковым именем — так работает его репликация.
 		RequestHandles.Add(Manager->AddComponentRequest(ALyraPlayerState::StaticClass(), URubezhInventoryComponent::StaticClass()));
 		RequestHandles.Add(Manager->AddComponentRequest(ALyraCharacter::StaticClass(), URubezhInteractionComponent::StaticClass()));
+		RequestHandles.Add(Manager->AddComponentRequest(ALyraCharacter::StaticClass(), URubezhInjuryComponent::StaticClass()));
 	}
 }
 

@@ -5,9 +5,14 @@
 #include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerController.h"
 #include "HAL/IConsoleManager.h"
+#include "AbilitySystemComponent.h"
+#include "AbilitySystemGlobals.h"
+#include "Health/RubezhHealthEffects.h"
+#include "Health/RubezhInjuryComponent.h"
 #include "Items/RubezhInventoryComponent.h"
 #include "Items/RubezhWorldItem.h"
 #include "RubezhCoreRuntimeModule.h"
+#include "RubezhGameplayTags.h"
 
 #if !UE_BUILD_SHIPPING
 
@@ -77,6 +82,47 @@ namespace
 		}
 	}
 
+	APawn* FindLocalPawnOnServer(UWorld* World)
+	{
+		APlayerController* Controller = (World && World->GetNetMode() != NM_Client) ? World->GetFirstPlayerController() : nullptr;
+		return Controller ? Controller->GetPawn() : nullptr;
+	}
+
+	void InjurePlayer(const TArray<FString>& Args, UWorld* World)
+	{
+		using namespace Rubezh::Injuries;
+		URubezhInjuryComponent* Injuries = URubezhInjuryComponent::FindForActor(FindLocalPawnOnServer(World));
+		const FString What = Args.Num() > 0 ? Args[0].ToLower() : FString();
+
+		FMask Mask = 0;
+		if (What == TEXT("bleeding") || What == TEXT("all")) { Mask |= Bit(ERubezhInjury::Bleeding); }
+		if (What == TEXT("heavy") || What == TEXT("all"))    { Mask |= Bit(ERubezhInjury::HeavyBleeding); }
+		if (What == TEXT("fracture") || What == TEXT("all")) { Mask |= Bit(ERubezhInjury::LegFracture); }
+		if (Mask != 0 || What == TEXT("pain"))               { Mask |= Bit(ERubezhInjury::Pain); }
+
+		if (!Injuries || Mask == 0)
+		{
+			UE_LOG(LogRubezh, Display, TEXT("Rubezh.Injure bleeding|heavy|fracture|pain|all — нанести травму (одиночная игра или хост)"));
+			return;
+		}
+		Injuries->AddInjuries(Mask);
+	}
+
+	void HurtPlayer(const TArray<FString>& Args, UWorld* World)
+	{
+		UAbilitySystemComponent* ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(FindLocalPawnOnServer(World));
+		const float Damage = Args.Num() > 0 ? FCString::Atof(*Args[0]) : 0.0f;
+		if (!ASC || Damage <= 0.0f)
+		{
+			UE_LOG(LogRubezh, Display, TEXT("Rubezh.Hurt <урон> — ранить себя, как попаданием (травмы выпадают по обычным шансам)"));
+			return;
+		}
+
+		const FGameplayEffectSpecHandle Spec = ASC->MakeOutgoingSpec(URubezhGE_InjuryDamage::StaticClass(), 1.0f, ASC->MakeEffectContext());
+		Spec.Data->SetSetByCallerMagnitude(RubezhGameplayTags::SetByCaller_Damage, Damage);
+		ASC->ApplyGameplayEffectSpecToSelf(*Spec.Data);
+	}
+
 	void PrintInventory(const TArray<FString>& Args, UWorld* World)
 	{
 		const URubezhInventoryComponent* Inventory = FindLocalInventory(World);
@@ -107,6 +153,14 @@ namespace
 	FAutoConsoleCommandWithWorldAndArgs SpawnCommand(
 		TEXT("Rubezh.Spawn"), TEXT("Положить предмет на землю перед собой: Rubezh.Spawn <ItemId> [Count]"),
 		FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&SpawnItem));
+
+	FAutoConsoleCommandWithWorldAndArgs InjureCommand(
+		TEXT("Rubezh.Injure"), TEXT("Нанести травму: Rubezh.Injure bleeding|heavy|fracture|pain|all"),
+		FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&InjurePlayer));
+
+	FAutoConsoleCommandWithWorldAndArgs HurtCommand(
+		TEXT("Rubezh.Hurt"), TEXT("Ранить себя: Rubezh.Hurt <урон>"),
+		FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&HurtPlayer));
 
 	FAutoConsoleCommandWithWorldAndArgs InventoryCommand(
 		TEXT("Rubezh.Inventory"), TEXT("Показать содержимое рюкзака и вес"),

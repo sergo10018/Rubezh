@@ -17,6 +17,7 @@
 #include "Components/VerticalBox.h"
 #include "Components/VerticalBoxSlot.h"
 #include "GameFramework/PlayerController.h"
+#include "Health/RubezhInjuryComponent.h"
 #include "Input/UIActionBindingHandle.h"
 #include "Items/RubezhInventoryComponent.h"
 #include "RubezhSettings.h"
@@ -289,6 +290,16 @@ void URubezhInventoryWindow::RequestRotate(int32 EntryIndex)
 	Inventory->ServerMoveEntry(EntryIndex, Entry.Position, !Entry.bRotated);
 }
 
+void URubezhInventoryWindow::RequestUse(int32 EntryIndex)
+{
+	const URubezhInventoryComponent* Inventory = BoundInventory.Get();
+	URubezhInjuryComponent* Injuries = URubezhInjuryComponent::FindForActor(GetOwningPlayerPawn());
+	if (Inventory && Injuries && Inventory->GetGrid().GetEntries().IsValidIndex(EntryIndex))
+	{
+		Injuries->UseItem(Inventory->GetGrid().GetEntries()[EntryIndex].ItemId);
+	}
+}
+
 bool URubezhInventoryWindow::EvaluateDrop(const FDragDropEvent& DragDropEvent, const URubezhInventoryDragOperation& Operation, FIntPoint& OutCell) const
 {
 	const URubezhInventoryComponent* Inventory = BoundInventory.Get();
@@ -406,6 +417,6 @@ void URubezhInventoryWindow::ShowDropToGroundHint(bool bShow)
 
 	const FString CloseKey = GetDefault<URubezhSettings>()->InventoryKey.GetDisplayName().ToString();
 	HintLine->SetText(FText::FromString(FString::Printf(
-		TEXT("ЛКМ — переложить · ПКМ — повернуть · перетащить за сетку — выбросить · %s или Esc — закрыть"), *CloseKey)));
+		TEXT("ЛКМ — переложить · ПКМ — повернуть · двойной клик — применить · за сетку — выбросить · %s — закрыть"), *CloseKey)));
 	HintLine->SetColorAndOpacity(FSlateColor(HintText));
 }

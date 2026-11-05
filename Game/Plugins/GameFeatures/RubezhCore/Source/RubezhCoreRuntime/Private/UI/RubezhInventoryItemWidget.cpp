@@ -9,6 +9,7 @@
 #include "Components/OverlaySlot.h"
 #include "Components/SizeBox.h"
 #include "Components/TextBlock.h"
+#include "Health/RubezhInjuryRules.h"
 #include "UI/RubezhInventoryStyle.h"
 #include "UI/RubezhInventoryWindow.h"
 
@@ -79,8 +80,9 @@ void URubezhInventoryItemWidget::Setup(URubezhInventoryWindow* InWindow, int32 I
 FText URubezhInventoryItemWidget::BuildTooltip() const
 {
 	const float StackWeight = Definition.WeightKg * Entry.Count;
-	return FText::FromString(FString::Printf(TEXT("%s\n%d шт. × %.3g кг = %.2f кг\nЛКМ — переложить, ПКМ — повернуть"),
-		*Definition.DisplayName.ToString(), Entry.Count, Definition.WeightKg, StackWeight));
+	const TCHAR* UseHint = Rubezh::Injuries::IsMedical(Definition) ? TEXT("\nДвойной клик — применить") : TEXT("");
+	return FText::FromString(FString::Printf(TEXT("%s\n%d шт. × %.3g кг = %.2f кг\nЛКМ — переложить, ПКМ — повернуть%s"),
+		*Definition.DisplayName.ToString(), Entry.Count, Definition.WeightKg, StackWeight, UseHint));
 }
 
 FReply URubezhInventoryItemWidget::NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
@@ -98,6 +100,16 @@ FReply URubezhInventoryItemWidget::NativeOnMouseButtonDown(const FGeometry& InGe
 
 	GrabOffset = InGeometry.AbsoluteToLocal(InMouseEvent.GetScreenSpacePosition());
 	return UWidgetBlueprintLibrary::DetectDragIfPressed(InMouseEvent, this, EKeys::LeftMouseButton).NativeReply;
+}
+
+FReply URubezhInventoryItemWidget::NativeOnMouseButtonDoubleClick(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
+{
+	if (Window.IsValid() && InMouseEvent.GetEffectingButton() == EKeys::LeftMouseButton && Rubezh::Injuries::IsMedical(Definition))
+	{
+		Window->RequestUse(EntryIndex);
+		return FReply::Handled();
+	}
+	return Super::NativeOnMouseButtonDoubleClick(InGeometry, InMouseEvent);
 }
 
 void URubezhInventoryItemWidget::NativeOnDragDetected(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent, UDragDropOperation*& OutOperation)

@@ -30,6 +30,7 @@ public:
 	URubezhInventoryWindow(const FObjectInitializer& ObjectInitializer);
 
 	void RequestRotate(int32 EntryIndex);
+	void RequestUse(int32 EntryIndex);
 	void HideDropPreview();
 
 protected:

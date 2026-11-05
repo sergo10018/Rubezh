@@ -10,7 +10,7 @@ struct FComponentRequestHandle;
 
 /**
  * Добавляет компоненты «Рубежа» к акторам Lyra через менеджер компонентов (как действие Add Components
- * в Experience, но из кода — без правки ассетов). Сейчас: рюкзак игрока на LyraPlayerState и подбор предметов на персонаже.
+ * в Experience, но из кода — без правки ассетов). Сейчас: рюкзак игрока на LyraPlayerState; подбор предметов и травмы на персонаже.
  */
 UCLASS()
 class RUBEZHCORERUNTIME_API URubezhComponentInjector : public UGameInstanceSubsystem

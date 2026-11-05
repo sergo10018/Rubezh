@@ -13,8 +13,8 @@ class URubezhInventoryWindow;
 struct FComponentRequestHandle;
 
 /**
- * Клавиши «Рубежа» поверх раскладки Lyra: рюкзак (URubezhSettings::InventoryKey, по умолчанию I)
- * и взаимодействие — подбор предметов (InteractKey, по умолчанию E).
+ * Клавиши «Рубежа» поверх раскладки Lyra: рюкзак (URubezhSettings::InventoryKey, по умолчанию I),
+ * взаимодействие — подбор предметов (InteractKey, по умолчанию E) и быстрое лечение (HealKey, по умолчанию H).
  * Действия и раскладка создаются кодом и подключаются по событию Lyra «BindInputsNow» —
  * так же, как это делает действие Game Feature «Add Input Mapping», но без правки ассетов.
  * Lyra очищает раскладки при появлении нового персонажа, поэтому подключение повторяется после каждого возрождения.
@@ -35,6 +35,7 @@ private:
 	void HandlePawnExtension(AActor* Actor, FName EventName);
 	void HandleToggleInput();
 	void HandleInteractInput();
+	void HandleHealInput();
 
 	TSharedPtr<FComponentRequestHandle> PawnExtensionHandle;
 	TWeakObjectPtr<URubezhInventoryWindow> OpenWindow;
@@ -44,6 +45,9 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<UInputAction> InteractAction;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UInputAction> HealAction;
 
 	UPROPERTY(Transient)
 	TObjectPtr<UInputMappingContext> Mapping;

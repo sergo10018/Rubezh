@@ -3,6 +3,7 @@
 #pragma once
 
 #include "Engine/DataTable.h"
+#include "Health/RubezhInjury.h"
 #include "Items/RubezhItemCategory.h"
 
 #include "RubezhItemDefinition.generated.h"
@@ -36,6 +37,24 @@ struct RUBEZHCORERUNTIME_API FRubezhItemDefinition : public FTableRowBase
 	// Сколько штук помещается в одну клетку-стопку.
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rubezh|Item", Meta = (ClampMin = 1))
 	int32 MaxStack = 1;
+
+	// --- Лечение (только для медицины; у остальных нули) ---
+
+	// Сколько секунд длится применение. 0 — предмет нельзя «использовать».
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rubezh|Item|Medical", Meta = (ClampMin = 0))
+	float UseSeconds = 0.0f;
+
+	// Сколько здоровья восстанавливает.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rubezh|Item|Medical", Meta = (ClampMin = 0))
+	float HealAmount = 0.0f;
+
+	// Какую травму лечит.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rubezh|Item|Medical")
+	ERubezhInjury Cures = ERubezhInjury::None;
+
+	// На сколько секунд снимает боль.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rubezh|Item|Medical", Meta = (ClampMin = 0))
+	float PainReliefSeconds = 0.0f;
 
 	FIntPoint GetFootprint(bool bRotated) const
 	{

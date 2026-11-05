@@ -13,6 +13,7 @@
 #include "GameFramework/PlayerController.h"
 #include "InputAction.h"
 #include "InputMappingContext.h"
+#include "Health/RubezhInjuryComponent.h"
 #include "Items/RubezhInteractionComponent.h"
 #include "NativeGameplayTags.h"
 #include "RubezhCoreRuntimeModule.h"
@@ -40,6 +41,8 @@ void URubezhPlayerInput::Initialize(FSubsystemCollectionBase& Collection)
 	Mapping = NewObject<UInputMappingContext>(this, TEXT("IMC_Rubezh_Player"));
 	Mapping->MapKey(ToggleInventoryAction, Settings->InventoryKey);
 	Mapping->MapKey(InteractAction, Settings->InteractKey);
+	HealAction = NewObject<UInputAction>(this, TEXT("IA_Rubezh_QuickHeal"));
+	Mapping->MapKey(HealAction, Settings->HealKey);
 
 	Collection.InitializeDependency<UGameFrameworkComponentManager>();
 	if (UGameFrameworkComponentManager* Manager = GetGameInstance()->GetSubsystem<UGameFrameworkComponentManager>())
@@ -76,6 +79,7 @@ void URubezhPlayerInput::HandlePawnExtension(AActor* Actor, FName EventName)
 	InputSubsystem->AddMappingContext(Mapping, PlayerMappingPriority);
 	InputComponent->BindAction(ToggleInventoryAction, ETriggerEvent::Started, this, &ThisClass::HandleToggleInput);
 	InputComponent->BindAction(InteractAction, ETriggerEvent::Started, this, &ThisClass::HandleInteractInput);
+	InputComponent->BindAction(HealAction, ETriggerEvent::Started, this, &ThisClass::HandleHealInput);
 }
 
 void URubezhPlayerInput::HandleToggleInput()
@@ -90,6 +94,15 @@ void URubezhPlayerInput::HandleInteractInput()
 	if (URubezhInteractionComponent* Interaction = Pawn ? Pawn->FindComponentByClass<URubezhInteractionComponent>() : nullptr)
 	{
 		Interaction->Interact();
+	}
+}
+
+void URubezhPlayerInput::HandleHealInput()
+{
+	const APlayerController* PlayerController = GetGameInstance()->GetFirstLocalPlayerController();
+	if (URubezhInjuryComponent* Injuries = URubezhInjuryComponent::FindForActor(PlayerController ? PlayerController->GetPawn() : nullptr))
+	{
+		Injuries->QuickTreat();
 	}
 }
 

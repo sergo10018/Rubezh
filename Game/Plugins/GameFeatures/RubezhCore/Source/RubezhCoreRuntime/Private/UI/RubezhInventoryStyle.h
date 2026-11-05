@@ -35,6 +35,9 @@ namespace Rubezh::InventoryStyle
 	inline constexpr float PromptScreenHeight = 0.56f;	// доля высоты экрана: чуть ниже прицела
 	inline const FLinearColor PromptBackground(0.0f, 0.0f, 0.0f, 0.6f);
 
+	// Строка травм и лечения — над полоской здоровья Lyra (доля высоты экрана, нижний край).
+	inline constexpr float HealthStatusScreenHeight = 0.86f;
+
 	inline FLinearColor GetCategoryColor(ERubezhItemCategory Category)
 	{
 		switch (Category)

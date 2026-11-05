@@ -36,6 +36,10 @@ URubezhGameplayAbility_Sprint::URubezhGameplayAbility_Sprint(const FObjectInitia
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
 	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::LocalPredicted;
 	ActivationOwnedTags.AddTag(RubezhGameplayTags::Status_Sprinting);
+	SetAssetTags(FGameplayTagContainer(RubezhGameplayTags::Ability_Sprint));
+	// С переломом и во время лечения бежать нельзя (активный спринт отменяет URubezhInjuryComponent).
+	ActivationBlockedTags.AddTag(RubezhGameplayTags::Status_Injury_LegFracture);
+	ActivationBlockedTags.AddTag(RubezhGameplayTags::Status_Treating);
 }
 
 bool URubezhGameplayAbility_Sprint::CanActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayTagContainer* SourceTags, const FGameplayTagContainer* TargetTags, FGameplayTagContainer* OptionalRelevantTags) const
