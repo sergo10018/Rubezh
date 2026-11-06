@@ -40,6 +40,7 @@ namespace
 		switch (Category)
 		{
 		case ERubezhItemCategory::Equipment:  return FLinearColor(0.12f, 0.16f, 0.07f);
+		case ERubezhItemCategory::Ammo:
 		case ERubezhItemCategory::Consumable: return FLinearColor(0.05f, 0.18f, 0.25f);
 		case ERubezhItemCategory::Valuable:   return FLinearColor(0.45f, 0.30f, 0.05f);
 		case ERubezhItemCategory::Junk:

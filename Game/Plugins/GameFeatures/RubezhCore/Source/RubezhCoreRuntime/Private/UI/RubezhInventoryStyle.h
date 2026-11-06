@@ -52,6 +52,7 @@ namespace Rubezh::InventoryStyle
 		switch (Category)
 		{
 		case ERubezhItemCategory::Equipment:  return FLinearColor(0.045f, 0.06f, 0.03f, 1.0f);  // хаки
+		case ERubezhItemCategory::Ammo:
 		case ERubezhItemCategory::Consumable: return FLinearColor(0.02f, 0.05f, 0.065f, 1.0f); // сине-зелёный
 		case ERubezhItemCategory::Valuable:   return FLinearColor(0.10f, 0.07f, 0.015f, 1.0f); // латунь
 		case ERubezhItemCategory::Junk:

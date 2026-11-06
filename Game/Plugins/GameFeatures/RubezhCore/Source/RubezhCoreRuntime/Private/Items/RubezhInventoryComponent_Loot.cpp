@@ -285,7 +285,8 @@ void URubezhInventoryComponent::DropBodyOnDeath(const APawn& Pawn)
 {
 	// Сначала кладём на землю, потом убираем из рюкзака — если положить не вышло, вещи не пропадут.
 	FRubezhInventoryGrid Kept = Grid;
-	const FRubezhInventoryGrid Lost = Rubezh::Loot::TakeLostOnDeath(Kept, [this](FName Id) { return FindDefinition(Id); });
+	FRandomStream Random(FMath::Rand());
+	const FRubezhInventoryGrid Lost = Rubezh::Loot::TakeLostOnDeath(Kept, [this](FName Id) { return FindDefinition(Id); }, Random);
 	if (Lost.IsEmpty())
 	{
 		return;

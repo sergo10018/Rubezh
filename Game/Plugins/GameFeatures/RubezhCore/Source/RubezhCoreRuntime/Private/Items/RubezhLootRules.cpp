@@ -60,13 +60,117 @@ namespace Rubezh::Loot
 		return Moved;
 	}
 
-	FRubezhInventoryGrid TakeLostOnDeath(FRubezhInventoryGrid& Grid, FRubezhItemLookup Lookup)
+	int32 ComputeAmmoLoss(int32 Total, float Percent)
+	{
+		if (Total <= 0 || Percent <= 0.0f)
+		{
+			return 0;
+		}
+		return FMath::Clamp(FMath::RoundToInt32(Total * Percent / 100.0f), 1, Total);
+	}
+
+	namespace
+	{
+		/** Калибр, которым заряжен магазин; None — это не заряженный магазин или его патроны неизвестны. */
+		FName GetLoadedCalibre(const FRubezhInventoryEntry& Entry, FRubezhItemLookup Lookup)
+		{
+			const FRubezhItemDefinition* Definition = Lookup(Entry.ItemId);
+			const bool bLoadedMagazine = Definition && Definition->MagazineCapacity > 0 && Entry.Rounds > 0;
+			return bLoadedMagazine && Lookup(Definition->AmmoItem) ? Definition->AmmoItem : NAME_None;
+		}
+
+		/** Вынуть патроны из магазинов этого калибра, начиная с наименее полного. */
+		void TakeRoundsFromMagazines(FRubezhInventoryGrid& Grid, FRubezhItemLookup Lookup, FName Calibre, int32 Count)
+		{
+			while (Count > 0)
+			{
+				FRubezhInventoryEntry* Lightest = nullptr;
+				for (int32 Index = 0; Index < Grid.GetEntries().Num(); ++Index)
+				{
+					FRubezhInventoryEntry* Entry = Grid.GetEntryMutable(Index);
+					if (GetLoadedCalibre(*Entry, Lookup) == Calibre && (!Lightest || Entry->Rounds < Lightest->Rounds))
+					{
+						Lightest = Entry;
+					}
+				}
+				if (!Lightest)
+				{
+					return;
+				}
+
+				const int32 Taken = FMath::Min(Lightest->Rounds, Count);
+				Lightest->Rounds -= Taken;
+				Count -= Taken;
+			}
+		}
+	}
+
+	TArray<FDrop> TakeAmmoLoss(FRubezhInventoryGrid& Grid, FRubezhItemLookup Lookup, float Percent)
+	{
+		TArray<FDrop> Calibres;
+		const auto AddRounds = [&Calibres](FName Calibre, int32 Rounds)
+		{
+			FDrop* Known = Calibres.FindByPredicate([Calibre](const FDrop& Drop) { return Drop.ItemId == Calibre; });
+			if (Known)
+			{
+				Known->Count += Rounds;
+			}
+			else
+			{
+				Calibres.Add({ Calibre, Rounds });
+			}
+		};
+
+		for (const FRubezhInventoryEntry& Entry : Grid.GetEntries())
+		{
+			const FRubezhItemDefinition* Definition = Lookup(Entry.ItemId);
+			const FName LoadedCalibre = GetLoadedCalibre(Entry, Lookup);
+			if (Definition && Definition->Category == ERubezhItemCategory::Ammo)
+			{
+				AddRounds(Entry.ItemId, Entry.Count);
+			}
+			else if (!LoadedCalibre.IsNone())
+			{
+				AddRounds(LoadedCalibre, Entry.Rounds);
+			}
+		}
+
+		TArray<FDrop> Lost;
+		for (const FDrop& Calibre : Calibres)
+		{
+			const int32 Count = ComputeAmmoLoss(Calibre.Count, Percent);
+			const int32 Loose = Grid.RemoveItem(Calibre.ItemId, Count);
+			TakeRoundsFromMagazines(Grid, Lookup, Calibre.ItemId, Count - Loose);
+			Lost.Add({ Calibre.ItemId, Count });
+		}
+		return Lost;
+	}
+
+	FRubezhInventoryGrid TakeLostOnDeath(FRubezhInventoryGrid& Grid, FRubezhItemLookup Lookup, FRandomStream& Random)
 	{
 		// Неизвестный предмет (удалён из таблицы) остаётся у игрока — не теряем его молча.
-		return FRubezhInventoryGrid::FromEntries(Grid.ExtractEntries([&Lookup](const FRubezhInventoryEntry& Entry)
+		TArray<FRubezhInventoryEntry> Lost = Grid.ExtractEntries([&Lookup](const FRubezhInventoryEntry& Entry)
 		{
 			const FRubezhItemDefinition* Definition = Lookup(Entry.ItemId);
 			return Definition && Rubezh::Items::IsLostOnDeath(Definition->Category);
-		}));
+		});
+
+		if (Random.FRandRange(0.0f, 100.0f) < DeathAmmoLossChancePercent)
+		{
+			const float Percent = Random.FRandRange(DeathAmmoLossMinPercent, DeathAmmoLossMaxPercent);
+			for (const FDrop& Drop : TakeAmmoLoss(Grid, Lookup, Percent))
+			{
+				// Выпавшее может не влезть в одну стопку: на теле столько ячеек, сколько стопок.
+				const int32 MaxStack = FMath::Max(Lookup(Drop.ItemId)->MaxStack, 1);
+				for (int32 Remaining = Drop.Count; Remaining > 0; Remaining -= MaxStack)
+				{
+					FRubezhInventoryEntry Stack;
+					Stack.ItemId = Drop.ItemId;
+					Stack.Count = FMath::Min(Remaining, MaxStack);
+					Lost.Add(Stack);
+				}
+			}
+		}
+		return FRubezhInventoryGrid::FromEntries(Lost);
 	}
 }

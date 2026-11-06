@@ -11,6 +11,7 @@ namespace Rubezh::Items
 		switch (Category)
 		{
 		case ERubezhItemCategory::Equipment:
+		case ERubezhItemCategory::Ammo:
 			return false;
 		case ERubezhItemCategory::Consumable:
 		case ERubezhItemCategory::Junk:
