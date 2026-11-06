@@ -60,10 +60,10 @@
     "semantic_hash": "59ed1b25545fefb7b2abc529736bfe34"
   },
   ".mcp.json": {
-    "mtime": 1793554019.3144474,
-    "seen": 1793565408.1976287,
-    "ast_hash": "7a00295c26d7cb563f2e532d127c60a1",
-    "semantic_hash": "7a00295c26d7cb563f2e532d127c60a1"
+    "mtime": 1793955175.258978,
+    "seen": 1793961070.0252004,
+    "ast_hash": "1c77636c4c481473c375a673706113b0",
+    "semantic_hash": "1c77636c4c481473c375a673706113b0"
   },
   "marketing/reels/01_pyatero/edit.json": {
     "mtime": 1793562203.7897952,
@@ -252,22 +252,22 @@
     "semantic_hash": "356678eb631bdd5e34fa8a3fb121a462"
   },
   "CLAUDE.md": {
-    "mtime": 1793560926.3350556,
-    "seen": 1793565408.1976287,
-    "ast_hash": "9a3ebecee8add94231598521d28c8544",
-    "semantic_hash": "9a3ebecee8add94231598521d28c8544"
+    "mtime": 1793957373.6328275,
+    "seen": 1793961070.0252004,
+    "ast_hash": "e287a92f27bdfd1549c4755a3362d6ae",
+    "semantic_hash": "e287a92f27bdfd1549c4755a3362d6ae"
   },
   "docs/00_\u041f\u0440\u043e\u0446\u0435\u0441\u0441_\u0438_\u043f\u043b\u0430\u043d_\u0440\u0430\u0437\u0440\u0430\u0431\u043e\u0442\u043a\u0438.md": {
-    "mtime": 1793554042.2527785,
-    "seen": 1793565408.1976287,
-    "ast_hash": "25a909465324ebc0ffdadbbff453f055",
-    "semantic_hash": "25a909465324ebc0ffdadbbff453f055"
+    "mtime": 1793909107.3635209,
+    "seen": 1793961070.0252004,
+    "ast_hash": "70060e8a86efb679765405b425d7537f",
+    "semantic_hash": "70060e8a86efb679765405b425d7537f"
   },
   "docs/01_\u041a\u0430\u043d\u043e\u043d.md": {
-    "mtime": 1793553908.2746336,
-    "seen": 1793565408.1976287,
-    "ast_hash": "67ca2fa67bfb53bd57e41172cbe6a8f7",
-    "semantic_hash": "67ca2fa67bfb53bd57e41172cbe6a8f7"
+    "mtime": 1793957373.6328275,
+    "seen": 1793961070.0252004,
+    "ast_hash": "9e7463a47b500b257b9df4195442f56b",
+    "semantic_hash": "9e7463a47b500b257b9df4195442f56b"
   },
   "docs/marketing/01_\u0421\u0442\u0440\u0430\u0442\u0435\u0433\u0438\u044f_\u043f\u0440\u043e\u0434\u0432\u0438\u0436\u0435\u043d\u0438\u044f.md": {
     "mtime": 1793560680.3179903,
@@ -306,10 +306,10 @@
     "semantic_hash": "4c84eb9e911619e9a76847de1b6b5a4c"
   },
   "docs/tech/unreal_mcp_setup.md": {
-    "mtime": 1793554019.95358,
-    "seen": 1793565408.1976287,
-    "ast_hash": "0d7490d1ab6a35b68aca5bcb07f818e6",
-    "semantic_hash": "0d7490d1ab6a35b68aca5bcb07f818e6"
+    "mtime": 1793647021.3878944,
+    "seen": 1793961070.0252004,
+    "ast_hash": "125bc0ee76298e2e363672341a148ae3",
+    "semantic_hash": "125bc0ee76298e2e363672341a148ae3"
   },
   "marketing/reels/01_pyatero/script.txt": {
     "mtime": 1793562106.8264344,
@@ -400,5 +400,125 @@
     "seen": 1793565408.1976287,
     "ast_hash": "b931efd2630f248b7d9c8fc5c9a5e56a",
     "semantic_hash": "b931efd2630f248b7d9c8fc5c9a5e56a"
+  },
+  "docs/registry/facts.yaml": {
+    "mtime": 1793957373.6317198,
+    "seen": 1793961070.0252004,
+    "ast_hash": "869223a3c22a9c85bdcfa7bbfe954c61",
+    "semantic_hash": "869223a3c22a9c85bdcfa7bbfe954c61"
+  },
+  "tools/unreal/setup_weapons.py": {
+    "mtime": 1793945919.1602106,
+    "seen": 1793961070.0252004,
+    "ast_hash": "ce91ac0776211d0cb05b0614d78cd4d4",
+    "semantic_hash": "ce91ac0776211d0cb05b0614d78cd4d4"
+  },
+  ".agents/ue-project-context.md": {
+    "mtime": 1793648304.6463077,
+    "seen": 1793961070.0252004,
+    "ast_hash": "e9278a5b12b617ab00256d32d2ed077e",
+    "semantic_hash": "e9278a5b12b617ab00256d32d2ed077e"
+  },
+  ".claude/skills/SOURCE-claude-code-game-studios.txt": {
+    "mtime": 1793909130.9164653,
+    "seen": 1793961070.0252004,
+    "ast_hash": "d8ad7c6f9312c62e06de066e342a78f0",
+    "semantic_hash": "d8ad7c6f9312c62e06de066e342a78f0"
+  },
+  ".claude/skills/consistency-check/SKILL.md": {
+    "mtime": 1793909106.3060465,
+    "seen": 1793961070.0252004,
+    "ast_hash": "18fdda8032173f978d0f7a76789113ca",
+    "semantic_hash": "18fdda8032173f978d0f7a76789113ca"
+  },
+  ".claude/skills/playtest-report/SKILL.md": {
+    "mtime": 1793909106.5683925,
+    "seen": 1793961070.0252004,
+    "ast_hash": "63ba1aaeec480e00bef23e0204ccfd84",
+    "semantic_hash": "63ba1aaeec480e00bef23e0204ccfd84"
+  },
+  "docs/gdd/00_Core_loop.md": {
+    "mtime": 1793957373.6317198,
+    "seen": 1793961070.0252004,
+    "ast_hash": "b57e875d528f98bd03c0bf4b165a01e9",
+    "semantic_hash": "b57e875d528f98bd03c0bf4b165a01e9"
+  },
+  "docs/gdd/01_\u0421\u0438\u0441\u0442\u0435\u043c\u044b_\u043f\u0440\u043e\u0442\u043e\u0442\u0438\u043f\u0430.md": {
+    "mtime": 1793957373.6317198,
+    "seen": 1793961070.0252004,
+    "ast_hash": "897b9452acb09184550d8ce40c8b40dc",
+    "semantic_hash": "897b9452acb09184550d8ce40c8b40dc"
+  },
+  "docs/qa/evidence/death-ammo-loss/report.md": {
+    "mtime": 1793957543.9777808,
+    "seen": 1793961070.0252004,
+    "ast_hash": "7d29d34cad7695609c48557c117543c7",
+    "semantic_hash": "7d29d34cad7695609c48557c117543c7"
+  },
+  "docs/qa/evidence/weapons/report.md": {
+    "mtime": 1793946997.8340375,
+    "seen": 1793961070.0252004,
+    "ast_hash": "706fe0e791cb9193c8c33b9d783b49aa",
+    "semantic_hash": "706fe0e791cb9193c8c33b9d783b49aa"
+  },
+  "docs/templates/README.md": {
+    "mtime": 1793909020.7240458,
+    "seen": 1793961070.0252004,
+    "ast_hash": "9eabae43d36fe18714b3bbad38a33c2c",
+    "semantic_hash": "9eabae43d36fe18714b3bbad38a33c2c"
+  },
+  "docs/templates/bug-report.md": {
+    "mtime": 1793909021.0873303,
+    "seen": 1793961070.0252004,
+    "ast_hash": "bd934dec0377e57d50b6a3df7659daae",
+    "semantic_hash": "bd934dec0377e57d50b6a3df7659daae"
+  },
+  "docs/templates/economy-model.md": {
+    "mtime": 1793909022.022407,
+    "seen": 1793961070.0252004,
+    "ast_hash": "1b5e2c29dda2c378c5025400b0fc4243",
+    "semantic_hash": "1b5e2c29dda2c378c5025400b0fc4243"
+  },
+  "docs/templates/faction-design.md": {
+    "mtime": 1793909022.322092,
+    "seen": 1793961070.0252004,
+    "ast_hash": "1a7acf2794c845467a883e84b6aaa587",
+    "semantic_hash": "1a7acf2794c845467a883e84b6aaa587"
+  },
+  "docs/templates/level-design-document.md": {
+    "mtime": 1793909022.5868976,
+    "seen": 1793961070.0252004,
+    "ast_hash": "cf2864f464bc90510cd41575a8acba61",
+    "semantic_hash": "cf2864f464bc90510cd41575a8acba61"
+  },
+  "docs/templates/playtest-report.md": {
+    "mtime": 1793909021.7110946,
+    "seen": 1793961070.0252004,
+    "ast_hash": "865704d2b93dc41a961dcc5204e84f2f",
+    "semantic_hash": "865704d2b93dc41a961dcc5204e84f2f"
+  },
+  "docs/templates/test-evidence.md": {
+    "mtime": 1793909021.3891163,
+    "seen": 1793961070.0252004,
+    "ast_hash": "10b83bbd22446191e23fa054be744966",
+    "semantic_hash": "10b83bbd22446191e23fa054be744966"
+  },
+  "docs/qa/evidence/death-ammo-loss/01_body.png": {
+    "mtime": 1793955090.2242885,
+    "seen": 1793961070.0252004,
+    "ast_hash": "fd6fd584ac2b9850874d711da4804870",
+    "semantic_hash": "fd6fd584ac2b9850874d711da4804870"
+  },
+  "docs/qa/evidence/death-ammo-loss/02_stacks.png": {
+    "mtime": 1793957545.3099096,
+    "seen": 1793961070.0252004,
+    "ast_hash": "c657aa7e4cc763669d0f0ec043b30a0a",
+    "semantic_hash": "c657aa7e4cc763669d0f0ec043b30a0a"
+  },
+  "docs/qa/evidence/weapons/01_window.png": {
+    "mtime": 1793946998.5971985,
+    "seen": 1793961070.0252004,
+    "ast_hash": "037b86c2446ece89e14452ac5c2178d3",
+    "semantic_hash": "037b86c2446ece89e14452ac5c2178d3"
   }
 }
