@@ -474,6 +474,12 @@ void ULyraGameplayAbility_RangedWeapon::EndAbility(const FGameplayAbilitySpecHan
 	}
 }
 
+FLyraWeaponShotCommitted& ULyraGameplayAbility_RangedWeapon::GetWeaponShotCommitted()
+{
+	static FLyraWeaponShotCommitted Delegate;
+	return Delegate;
+}
+
 void ULyraGameplayAbility_RangedWeapon::OnTargetDataReadyCallback(const FGameplayAbilityTargetDataHandle& InData, FGameplayTag ApplicationTag)
 {
 	UAbilitySystemComponent* MyAbilityComponent = CurrentActorInfo->AbilitySystemComponent.Get();
@@ -535,8 +541,14 @@ void ULyraGameplayAbility_RangedWeapon::OnTargetDataReadyCallback(const FGamepla
 			check(WeaponData);
 			WeaponData->AddSpread();
 
+			// Rubezh: a misfire spends the round but fires nothing; the ability still ends on its usual timer.
+			const bool bShotFired = !GetWeaponShotCommitted().IsBound() || GetWeaponShotCommitted().Execute(WeaponData->GetInstigator(), WeaponData->GetPawn());
+
 			// Let the blueprint do stuff like apply effects to the targets
-			OnRangedWeaponTargetDataReady(LocalTargetDataHandle);
+			if (bShotFired)
+			{
+				OnRangedWeaponTargetDataReady(LocalTargetDataHandle);
+			}
 		}
 		else
 		{

@@ -302,7 +302,7 @@ namespace Rubezh::Equipment
 		for (const FRubezhInventoryEntry& Entry : Grid.GetEntries())
 		{
 			const FRubezhItemDefinition* Item = Lookup(Entry.ItemId);
-			if (!Item || NewGrid.AddItem(Entry.ItemId, *Item, Entry.Count) != 0)
+			if (!Item || NewGrid.AddEntry(Entry, *Item) != 0)
 			{
 				return EResult::WontFit;
 			}

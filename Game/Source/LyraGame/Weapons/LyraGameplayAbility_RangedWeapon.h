@@ -18,6 +18,13 @@ struct FGameplayEventData;
 struct FGameplayTag;
 struct FGameplayTagContainer;
 
+/**
+ * Rubezh: called when a shot was committed, on the server and on the client that fired it.
+ * Returns false for a misfire: the round is spent, but no bullet leaves the barrel.
+ * Item is the inventory item the weapon was created from. Unbound means every shot fires.
+ */
+DECLARE_DELEGATE_RetVal_TwoParams(bool, FLyraWeaponShotCommitted, UObject* /*Item*/, APawn* /*Pawn*/);
+
 /** Defines where an ability starts its trace from and where it should face */
 UENUM(BlueprintType)
 enum class ELyraAbilityTargetingSource : uint8
@@ -54,6 +61,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category="Lyra|Ability")
 	ULyraRangedWeaponInstance* GetWeaponInstance() const;
+
+	/** Rubezh: bound by RubezhCoreRuntime (magazine ammo, wear, misfires, recoil). */
+	static LYRAGAME_API FLyraWeaponShotCommitted& GetWeaponShotCommitted();
 
 	//~UGameplayAbility interface
 	virtual bool CanActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayTagContainer* SourceTags = nullptr, const FGameplayTagContainer* TargetTags = nullptr, OUT FGameplayTagContainer* OptionalRelevantTags = nullptr) const override;

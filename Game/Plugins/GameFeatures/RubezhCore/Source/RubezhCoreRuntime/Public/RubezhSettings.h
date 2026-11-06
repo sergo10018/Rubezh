@@ -24,6 +24,10 @@ public:
 	UPROPERTY(Config, EditAnywhere, Category = "Items", Meta = (RequiredAssetDataTags = "RowStructure=/Script/RubezhCoreRuntime.RubezhLootTableRow"))
 	TSoftObjectPtr<UDataTable> LootTable;
 
+	// Таблица оружия (строки FRubezhWeaponDefinition), импортированная из data/weapons.csv.
+	UPROPERTY(Config, EditAnywhere, Category = "Items", Meta = (RequiredAssetDataTags = "RowStructure=/Script/RubezhCoreRuntime.RubezhWeaponDefinition"))
+	TSoftObjectPtr<UDataTable> WeaponTable;
+
 	// Сколько ячеек без рюкзака — карманы.
 	UPROPERTY(Config, EditAnywhere, Category = "Items", Meta = (ClampMin = 1))
 	int32 PocketSlots = 4;
@@ -35,6 +39,14 @@ public:
 	// Что надето на новом персонаже (идентификаторы предметов из таблицы).
 	UPROPERTY(Config, EditAnywhere, Category = "Items")
 	TArray<FName> StartingEquipment = { TEXT("backpack_sack"), TEXT("jacket_windbreaker"), TEXT("pants_work") };
+
+	// Оружие нового персонажа: заряжено, берётся в слоты.
+	UPROPERTY(Config, EditAnywhere, Category = "Items")
+	TArray<FName> StartingWeapons = { TEXT("pistol_9x18") };
+
+	// Сколько полных запасных магазинов к стартовому оружию лежит в рюкзаке.
+	UPROPERTY(Config, EditAnywhere, Category = "Items", Meta = (ClampMin = 0))
+	int32 StartingSpareMagazines = 1;
 
 	// Клавиша, открывающая и закрывающая окно рюкзака.
 	UPROPERTY(Config, EditAnywhere, Category = "Input")

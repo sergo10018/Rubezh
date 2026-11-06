@@ -6,6 +6,7 @@
 #include "AbilitySystemGlobals.h"
 #include "Character/LyraHealthComponent.h"
 #include "Engine/DataTable.h"
+#include "Items/RubezhItemCatalog.h"
 #include "Items/RubezhLootContainer.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/Controller.h"
@@ -56,6 +57,7 @@ void URubezhInventoryComponent::GetLifetimeReplicatedProps(TArray<FLifetimePrope
 	// Содержимое чужого рюкзака — тайна: видит только владелец. Тело обыскивают через ARubezhLootContainer.
 	DOREPLIFETIME_CONDITION(URubezhInventoryComponent, Grid, COND_OwnerOnly);
 	DOREPLIFETIME_CONDITION(URubezhInventoryComponent, Equipped, COND_OwnerOnly);
+	DOREPLIFETIME_CONDITION(URubezhInventoryComponent, WeaponSlots, COND_OwnerOnly);
 	DOREPLIFETIME_CONDITION(URubezhInventoryComponent, LootContainer, COND_OwnerOnly);
 	DOREPLIFETIME_CONDITION(URubezhInventoryComponent, LootGrid, COND_OwnerOnly);
 	DOREPLIFETIME_CONDITION(URubezhInventoryComponent, SearchingContainer, COND_OwnerOnly);
@@ -77,7 +79,11 @@ void URubezhInventoryComponent::BeginPlay()
 	{
 		Equipped.SetNum(Rubezh::Equipment::SlotCount);
 		Grid = FRubezhInventoryGrid(Settings->PocketSlots);
+		WeaponSlots.SetNum(Rubezh::Weapons::SlotCount);
+		WeaponInstances.SetNum(Rubezh::Weapons::SlotCount);
 		ApplyStartingEquipment();
+		ApplyStartingWeapons();
+		BindReloadEvent();
 	}
 
 	if (UAbilitySystemComponent* ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(GetOwner()))
@@ -109,8 +115,11 @@ void URubezhInventoryComponent::EndPlay(const EEndPlayReason::Type EndPlayReason
 	{
 		CloseLoot();
 		CancelSearch();
+		UnbindReloadEvent();
 	}
 	GetWorld()->GetTimerManager().ClearTimer(WeightSyncTimer);
+	GetWorld()->GetTimerManager().ClearTimer(WeaponInstanceTimer);
+	GetWorld()->GetTimerManager().ClearTimer(MagazineLoadTimer);
 
 	Super::EndPlay(EndPlayReason);
 }
@@ -140,6 +149,7 @@ void URubezhInventoryComponent::OnPawnSet(APlayerState* Player, APawn* NewPawn, 
 	if (NewPawn)
 	{
 		GetWorld()->GetTimerManager().SetTimer(WeightSyncTimer, this, &ThisClass::TrySyncWeightAttributes, WeightSyncIntervalSeconds, true);
+		RebuildWeaponInstances();
 	}
 }
 
@@ -214,13 +224,17 @@ Rubezh::Equipment::FProtection URubezhInventoryComponent::GetProtection(ERubezhB
 
 float URubezhInventoryComponent::GetIncomingDamageMultiplier(const UAbilitySystemComponent* Target, const FHitResult* Hit)
 {
+	// Попадание в голову опаснее, в конечности — слабее; это верно и для целей без снаряжения.
+	const ERubezhBodyZone Zone = Hit ? Rubezh::Equipment::GetZoneForBone(Hit->BoneName) : ERubezhBodyZone::Torso;
+	const float ZoneMultiplier = Rubezh::Weapons::GetZoneDamageMultiplier(Zone);
+	UE_LOG(LogRubezh, Verbose, TEXT("Попадание: кость %s, %s, множитель %.2f"), Hit ? *Hit->BoneName.ToString() : TEXT("нет"), Rubezh::Equipment::GetZoneName(Zone), ZoneMultiplier);
+
 	const URubezhInventoryComponent* Inventory = Target ? FindForActor(Target->GetOwnerActor()) : nullptr;
 	if (!Inventory)
 	{
-		return 1.0f;
+		return ZoneMultiplier;
 	}
-	const ERubezhBodyZone Zone = Hit ? Rubezh::Equipment::GetZoneForBone(Hit->BoneName) : ERubezhBodyZone::Torso;
-	return Inventory->GetProtection(Zone).DamageMultiplier;
+	return Inventory->GetProtection(Zone).DamageMultiplier * ZoneMultiplier;
 }
 
 void URubezhInventoryComponent::LogEquipFailure(Rubezh::Equipment::EResult Result) const
@@ -320,6 +334,23 @@ int32 URubezhInventoryComponent::AddItem(FName ItemId, int32 Count)
 	return NotAdded;
 }
 
+int32 URubezhInventoryComponent::AddEntry(const FRubezhInventoryEntry& Entry)
+{
+	const FRubezhItemDefinition* Definition = FindDefinition(Entry.ItemId);
+	if (!GetOwner()->HasAuthority() || !Definition || Entry.Count <= 0)
+	{
+		return Entry.Count;
+	}
+
+	// Несколько одинаковых штучных предметов (поставили на карту стопкой) — обычное добавление.
+	const int32 NotAdded = Entry.Count > 1 ? Grid.AddItem(Entry.ItemId, *Definition, Entry.Count) : Grid.AddEntry(Entry, *Definition);
+	if (NotAdded < Entry.Count)
+	{
+		HandleGridChanged();
+	}
+	return NotAdded;
+}
+
 int32 URubezhInventoryComponent::RemoveItem(FName ItemId, int32 Count)
 {
 	if (!GetOwner()->HasAuthority() || Count <= 0)
@@ -354,7 +385,7 @@ void URubezhInventoryComponent::ServerDropEntry_Implementation(int32 EntryIndex)
 
 	// Сначала кладём на землю, потом убираем из рюкзака — если положить не вышло, вещь не пропадёт.
 	const FRubezhInventoryEntry Entry = Grid.GetEntries()[EntryIndex];
-	if (!ARubezhWorldItem::SpawnInFrontOf(*Pawn, Entry.ItemId, Entry.Count))
+	if (!ARubezhWorldItem::SpawnEntryInFrontOf(*Pawn, Entry))
 	{
 		return;
 	}
@@ -367,7 +398,19 @@ void URubezhInventoryComponent::ServerDropEntry_Implementation(int32 EntryIndex)
 float URubezhInventoryComponent::GetTotalWeight() const
 {
 	auto Lookup = [this](FName Id) { return FindDefinition(Id); };
-	return Grid.GetTotalWeight(Lookup) + Rubezh::Equipment::GetWeight(Equipped, Lookup);
+	float Weight = Grid.GetTotalWeight(Lookup) + Rubezh::Equipment::GetWeight(Equipped, Lookup);
+	for (const FRubezhInventoryEntry& Weapon : WeaponSlots)
+	{
+		const FRubezhItemDefinition* Definition = FindDefinition(Weapon.ItemId);
+		const FRubezhWeaponDefinition* Stats = Definition ? Rubezh::Items::FindWeapon(Weapon.ItemId) : nullptr;
+		if (Definition && Stats)
+		{
+			const FRubezhItemDefinition* Ammo = FindDefinition(Stats->AmmoItem);
+			const FRubezhItemDefinition* Magazine = (Weapon.bHasMagazine && !Stats->MagazineItem.IsNone()) ? FindDefinition(Stats->MagazineItem) : nullptr;
+			Weight += Definition->WeightKg + (Ammo ? Ammo->WeightKg * Weapon.Rounds : 0.0f) + (Magazine ? Magazine->WeightKg : 0.0f);
+		}
+	}
+	return Weight;
 }
 
 void URubezhInventoryComponent::OnRep_Grid()
@@ -384,6 +427,8 @@ void URubezhInventoryComponent::OnOwnerDeathStarted(AActor* OwningActor)
 
 	CloseLoot();
 	CancelSearch();
+	ServerStopLoadingMagazine_Implementation();
+	ClearWeaponInstances();
 	if (const APawn* Pawn = Cast<APawn>(OwningActor))
 	{
 		DropBodyOnDeath(*Pawn);
@@ -393,6 +438,7 @@ void URubezhInventoryComponent::OnOwnerDeathStarted(AActor* OwningActor)
 void URubezhInventoryComponent::HandleGridChanged()
 {
 	UpdateCarriedWeight();
+	SyncWeaponTags();
 	OnInventoryChanged.Broadcast();
 }
 

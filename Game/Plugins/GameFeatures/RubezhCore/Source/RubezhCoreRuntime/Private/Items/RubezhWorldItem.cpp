@@ -8,6 +8,7 @@
 #include "Engine/World.h"
 #include "GameFramework/Pawn.h"
 #include "Items/RubezhItemCatalog.h"
+#include "Items/RubezhInventoryGrid.h"
 #include "Items/RubezhItemDefinition.h"
 #include "Items/RubezhPickupRules.h"
 #include "Materials/MaterialInstanceDynamic.h"
@@ -72,6 +73,31 @@ ARubezhWorldItem::ARubezhWorldItem(const FObjectInitializer& ObjectInitializer)
 	Mesh->SetCollisionResponseToChannel(ECC_Camera, ECR_Ignore);
 	Mesh->SetGenerateOverlapEvents(false);
 	Mesh->SetCanEverAffectNavigation(false);
+}
+
+ARubezhWorldItem* ARubezhWorldItem::SpawnEntryInFrontOf(APawn& Pawn, const FRubezhInventoryEntry& Entry)
+{
+	ARubezhWorldItem* Item = SpawnInFrontOf(Pawn, Entry.ItemId, Entry.Count);
+	if (Item)
+	{
+		Item->Rounds = Entry.Rounds;
+		Item->Durability = Entry.Durability;
+		Item->bHasMagazine = Entry.bHasMagazine;
+		Item->bNextShotMisfires = Entry.bNextShotMisfires;
+	}
+	return Item;
+}
+
+FRubezhInventoryEntry ARubezhWorldItem::MakeEntry() const
+{
+	FRubezhInventoryEntry Entry;
+	Entry.ItemId = ItemId;
+	Entry.Count = Count;
+	Entry.Rounds = Rounds;
+	Entry.Durability = Durability;
+	Entry.bHasMagazine = bHasMagazine;
+	Entry.bNextShotMisfires = bNextShotMisfires;
+	return Entry;
 }
 
 FVector ARubezhWorldItem::FindGround(UWorld& World, const FVector& Point, const AActor* Ignore)

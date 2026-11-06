@@ -9,6 +9,8 @@
 #include "Components/TextBlock.h"
 #include "Components/VerticalBox.h"
 #include "Items/RubezhEquipment.h"
+#include "Items/RubezhItemCatalog.h"
+#include "Items/RubezhWeaponRules.h"
 #include "UI/RubezhInventoryItemWidget.h"
 #include "UI/RubezhInventoryStyle.h"
 #include "UI/RubezhInventoryWindow.h"
@@ -59,6 +61,29 @@ void URubezhEquipmentSlotWidget::Setup(URubezhInventoryWindow* InWindow, ERubezh
 	SetItem(NAME_None, nullptr);
 }
 
+void URubezhEquipmentSlotWidget::SetupWeapon(URubezhInventoryWindow* InWindow, int32 InWeaponSlot)
+{
+	Window = InWindow;
+	WeaponSlot = InWeaponSlot;
+	SlotText->SetText(FText::FromString(FString::Printf(TEXT("%d — %s"), WeaponSlot + 1, Rubezh::Weapons::GetSlotName(WeaponSlot))));
+	SetWeapon(FRubezhInventoryEntry(), nullptr);
+}
+
+void URubezhEquipmentSlotWidget::SetWeapon(const FRubezhInventoryEntry& Entry, const FRubezhItemDefinition* Item)
+{
+	WeaponEntry = Entry;
+	ItemId = Item ? Entry.ItemId : NAME_None;
+	Definition = Item ? *Item : FRubezhItemDefinition();
+	ItemText->SetText(Item
+		? FText::FromString(FString::Printf(TEXT("%s · %d пат. · %.0f %%"), *Item->DisplayName.ToString(), Entry.Rounds, Entry.Durability))
+		: FText::FromString(TEXT("—")));
+	ResetHighlight();
+
+	SetToolTipText(FText::FromString(Item
+		? FString::Printf(TEXT("%s\nЗаряжено: %d, прочность: %.0f %%\nПеретащить в рюкзак или двойной клик — убрать, за окно — бросить"), *Item->DisplayName.ToString(), Entry.Rounds, Entry.Durability)
+		: FString::Printf(TEXT("%s: пусто. Перетащите сюда оружие или дважды кликните его в рюкзаке"), Rubezh::Weapons::GetSlotName(WeaponSlot))));
+}
+
 void URubezhEquipmentSlotWidget::SetItem(FName InItemId, const FRubezhItemDefinition* Item)
 {
 	using namespace Rubezh::InventoryStyle;
@@ -95,7 +120,14 @@ FReply URubezhEquipmentSlotWidget::NativeOnMouseButtonDoubleClick(const FGeometr
 {
 	if (Window.IsValid() && !ItemId.IsNone() && InMouseEvent.GetEffectingButton() == EKeys::LeftMouseButton)
 	{
-		Window->RequestUnequip(EquipSlot, {});
+		if (WeaponSlot != INDEX_NONE)
+		{
+			Window->RequestUnequipWeapon(WeaponSlot, {});
+		}
+		else
+		{
+			Window->RequestUnequip(EquipSlot, {});
+		}
 		return FReply::Handled();
 	}
 	return Super::NativeOnMouseButtonDoubleClick(InGeometry, InMouseEvent);
@@ -105,15 +137,16 @@ void URubezhEquipmentSlotWidget::NativeOnDragDetected(const FGeometry& InGeometr
 {
 	using namespace Rubezh::InventoryStyle;
 
-	FRubezhInventoryEntry Entry;
+	FRubezhInventoryEntry Entry = WeaponSlot != INDEX_NONE ? WeaponEntry : FRubezhInventoryEntry();
 	Entry.ItemId = ItemId;
 	Entry.Count = 1;
 	URubezhInventoryItemWidget* DragVisual = CreateWidget<URubezhInventoryItemWidget>(GetOwningPlayer());
 	DragVisual->Setup(nullptr, ERubezhItemSource::Equipment, INDEX_NONE, Entry, Definition);
 
 	URubezhInventoryDragOperation* Operation = NewObject<URubezhInventoryDragOperation>(this);
-	Operation->Source = ERubezhItemSource::Equipment;
+	Operation->Source = WeaponSlot != INDEX_NONE ? ERubezhItemSource::Weapon : ERubezhItemSource::Equipment;
 	Operation->FromSlot = EquipSlot;
+	Operation->FromWeaponSlot = WeaponSlot;
 	Operation->ItemId = ItemId;
 	Operation->DefaultDragVisual = DragVisual;
 	Operation->Pivot = EDragPivot::CenterCenter;
@@ -135,7 +168,16 @@ bool URubezhEquipmentSlotWidget::AcceptsDrag(const UDragDropOperation* Operation
 {
 	const URubezhInventoryDragOperation* Drag = Cast<URubezhInventoryDragOperation>(Operation);
 	const FRubezhItemDefinition* Item = (Drag && Window.IsValid()) ? Window->FindEntryDefinition(Drag->EntryIndex) : nullptr;
-	return Drag && Drag->Source == ERubezhItemSource::Backpack && Item && Item->EquipSlot == EquipSlot;
+	if (!Drag || Drag->Source != ERubezhItemSource::Backpack || !Item)
+	{
+		return false;
+	}
+	if (WeaponSlot != INDEX_NONE)
+	{
+		const FRubezhWeaponDefinition* Weapon = Rubezh::Items::FindWeapon(Drag->ItemId);
+		return Weapon && Rubezh::Weapons::SlotAccepts(Weapon->WeaponClass, WeaponSlot);
+	}
+	return Item->EquipSlot == EquipSlot;
 }
 
 bool URubezhEquipmentSlotWidget::NativeOnDragOver(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation)
@@ -150,7 +192,7 @@ bool URubezhEquipmentSlotWidget::NativeOnDragOver(const FGeometry& InGeometry, c
 	{
 		Window->HideDropPreview();
 	}
-	if (Drag->Source != ERubezhItemSource::Equipment)
+	if (Drag->Source == ERubezhItemSource::Backpack || Drag->Source == ERubezhItemSource::Loot)
 	{
 		Frame->SetBrushColor(AcceptsDrag(InOperation) ? DropAllowed : DropBlocked);
 	}
@@ -168,7 +210,14 @@ bool URubezhEquipmentSlotWidget::NativeOnDrop(const FGeometry& InGeometry, const
 	const URubezhInventoryDragOperation* Drag = Cast<URubezhInventoryDragOperation>(InOperation);
 	if (Drag && Window.IsValid() && AcceptsDrag(InOperation))
 	{
-		Window->RequestEquip(Drag->EntryIndex);
+		if (WeaponSlot != INDEX_NONE)
+		{
+			Window->RequestEquipWeapon(Drag->EntryIndex, WeaponSlot);
+		}
+		else
+		{
+			Window->RequestEquip(Drag->EntryIndex);
+		}
 	}
 	else if (Window.IsValid())
 	{

@@ -6,6 +6,7 @@
 #include "AbilitySystem/LyraGameplayEffectContext.h"
 #include "AbilitySystem/LyraAbilitySourceInterface.h"
 #include "Engine/World.h"
+#include "Equipment/LyraEquipmentInstance.h"
 #include "LyraLogChannels.h"
 #include "Teams/LyraTeamSubsystem.h"
 
@@ -37,6 +38,12 @@ FLyraIncomingDamageMultiplier& ULyraDamageExecution::GetIncomingDamageMultiplier
 ULyraDamageExecution::ULyraDamageExecution()
 {
 	RelevantAttributesToCapture.Add(DamageStatics().BaseDamageDef);
+}
+
+FLyraWeaponDamageOverride& ULyraDamageExecution::GetWeaponDamageOverride()
+{
+	static FLyraWeaponDamageOverride Delegate;
+	return Delegate;
 }
 
 void ULyraDamageExecution::Execute_Implementation(const FGameplayEffectCustomExecutionParameters& ExecutionParams, FGameplayEffectCustomExecutionOutput& OutExecutionOutput) const
@@ -139,6 +146,16 @@ void ULyraDamageExecution::Execute_Implementation(const FGameplayEffectCustomExe
 	if (GetIncomingDamageMultiplier().IsBound())
 	{
 		TargetProtectionMultiplier = FMath::Max(GetIncomingDamageMultiplier().Execute(TargetAbilitySystemComponent, HitActorResult), 0.0f);
+	}
+
+	// Rubezh: the firing weapon's own damage (from data/weapons.csv).
+	if (GetWeaponDamageOverride().IsBound())
+	{
+		if (const ULyraEquipmentInstance* Weapon = Cast<ULyraEquipmentInstance>(TypedContext->GetSourceObject()))
+		{
+			const float WeaponDamage = GetWeaponDamageOverride().Execute(Weapon->GetInstigator(), Distance);
+			BaseDamage = WeaponDamage >= 0.0f ? WeaponDamage : BaseDamage;
+		}
 	}
 
 	const float DamageDone = FMath::Max(BaseDamage * DistanceAttenuation * PhysicalMaterialAttenuation * DamageInteractionAllowedMultiplier * TargetProtectionMultiplier, 0.0f);

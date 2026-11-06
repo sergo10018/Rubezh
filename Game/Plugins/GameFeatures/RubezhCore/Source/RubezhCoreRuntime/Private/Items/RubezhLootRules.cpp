@@ -46,14 +46,14 @@ namespace Rubezh::Loot
 			// На такую же стопку — докладываем, сколько влезет; остальное остаётся на месте.
 			Moved = To.AddToEntry(TargetIndex, Entry.Count, Definition->MaxStack);
 		}
-		else if (TargetSlot.IsSet() && TargetIndex == INDEX_NONE && To.AddEntryAt(Entry.ItemId, Entry.Count, TargetSlot.GetValue(), Lookup))
+		else if (TargetSlot.IsSet() && TargetIndex == INDEX_NONE && To.PlaceEntry(Entry, TargetSlot.GetValue()))
 		{
 			Moved = Entry.Count;
 		}
 		else
 		{
 			// Занятая другим предметом ячейка или «куда влезет»: докладываем в стопки, потом в пустые ячейки.
-			Moved = Entry.Count - To.AddItem(Entry.ItemId, *Definition, Entry.Count);
+			Moved = Entry.Count - To.AddEntry(Entry, *Definition);
 		}
 
 		From.ReduceEntry(EntryIndex, Moved);

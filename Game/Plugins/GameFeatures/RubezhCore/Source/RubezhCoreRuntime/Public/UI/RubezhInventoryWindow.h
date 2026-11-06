@@ -45,6 +45,11 @@ public:
 	/** Снять в рюкзак: в ячейку TargetSlot или (не задана) куда влезет. */
 	void RequestUnequip(ERubezhEquipSlot EquipSlot, TOptional<int32> TargetSlot);
 
+	/** Взять оружие из рюкзака в слот (не задан — подходящий сам). */
+	void RequestEquipWeapon(int32 EntryIndex, TOptional<int32> WeaponSlot);
+	/** Убрать оружие из слота в ячейку Cell или (не задана) куда влезет. */
+	void RequestUnequipWeapon(int32 WeaponSlot, TOptional<int32> Cell);
+
 	bool IsLootOpen() const;
 	void HideDropPreview();
 	void ShowGroundHint(bool bShow);
@@ -89,6 +94,8 @@ private:
 	void PutIntoLoot(int32 EntryIndex, int32 TargetSlot);
 	void TakeFromLoot(int32 LootEntryIndex, int32 TargetSlot);
 	void RequestUse(int32 EntryIndex);
+	/** Патроны отпущены на магазин: начать набивку. false — под курсором не подходящий магазин. */
+	bool TryLoadMagazine(const URubezhInventoryDragOperation& Operation, int32 Cell);
 
 	/** Показать причину отказа красным в строке подсказки на несколько секунд. */
 	void ShowError(const FString& Message);
@@ -120,6 +127,9 @@ private:
 
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<URubezhEquipmentSlotWidget>> EquipSlots;
+
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<URubezhEquipmentSlotWidget>> WeaponSlotWidgets;
 
 	UPROPERTY(Transient)
 	TObjectPtr<UProgressBar> WeightBar;

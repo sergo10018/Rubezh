@@ -14,15 +14,16 @@ class URubezhInventoryWindow;
 class USizeBox;
 class UTextBlock;
 
-/** Откуда предмет в окне: свой рюкзак, обыскиваемый ящик (тело, брошенный рюкзак) или слот снаряжения. */
+/** Откуда предмет в окне: свой рюкзак, обыскиваемый ящик (тело, брошенный рюкзак), слот снаряжения или оружия. */
 enum class ERubezhItemSource : uint8
 {
 	Backpack,
 	Loot,
-	Equipment
+	Equipment,
+	Weapon
 };
 
-/** Что перетаскиваем: стопку (Source + EntryIndex) или надетый предмет (FromSlot). */
+/** Что перетаскиваем: стопку (Source + EntryIndex), надетый предмет (FromSlot) или оружие из слота (FromWeaponSlot). */
 UCLASS()
 class RUBEZHCORERUNTIME_API URubezhInventoryDragOperation : public UDragDropOperation
 {
@@ -33,6 +34,7 @@ public:
 	int32 EntryIndex = INDEX_NONE;
 	FName ItemId;
 	ERubezhEquipSlot FromSlot = ERubezhEquipSlot::None;
+	int32 FromWeaponSlot = INDEX_NONE;
 };
 
 /**

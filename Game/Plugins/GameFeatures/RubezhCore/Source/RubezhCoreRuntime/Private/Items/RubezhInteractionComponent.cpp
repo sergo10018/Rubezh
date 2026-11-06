@@ -21,6 +21,7 @@ namespace
 {
 	// Подсказка под окнами интерфейса Lyra.
 	constexpr int32 PromptZOrder = -10;
+	constexpr double NoticeSeconds = 1.5;
 
 	FVector GetFocusLocation(const AActor& Actor)
 	{
@@ -139,8 +140,20 @@ FString URubezhInteractionComponent::DescribeContainerAction(const ARubezhLootCo
 	return FString::Printf(TEXT("%s — обыскать"), *Key);
 }
 
+void URubezhInteractionComponent::ShowNotice(const FString& Text)
+{
+	Notice = Text;
+	NoticeEndTime = GetWorld()->GetTimeSeconds() + NoticeSeconds;
+}
+
 void URubezhInteractionComponent::UpdatePrompt()
 {
+	if (GetWorld()->GetTimeSeconds() < NoticeEndTime)
+	{
+		ShowPrompt(FText::GetEmpty(), Notice, true);
+		return;
+	}
+
 	const AActor* Focused = FocusedActor.Get();
 	if (const ARubezhLootContainer* Container = Cast<ARubezhLootContainer>(Focused))
 	{
@@ -228,6 +241,5 @@ void URubezhInteractionComponent::ServerPickUp_Implementation(ARubezhWorldItem* 
 		return;
 	}
 
-	const int32 NotAdded = Inventory->AddItem(Item->GetItemId(), Item->GetCount());
-	Item->SetCount(NotAdded);
+	Item->SetCount(Inventory->AddEntry(Item->MakeEntry()));
 }

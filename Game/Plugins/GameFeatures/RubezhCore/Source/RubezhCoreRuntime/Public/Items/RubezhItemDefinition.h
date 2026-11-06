@@ -32,6 +32,16 @@ struct RUBEZHCORERUNTIME_API FRubezhItemDefinition : public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rubezh|Item", Meta = (ClampMin = 1))
 	int32 MaxStack = 1;
 
+	// --- Магазин (у остальных None и 0) ---
+
+	// Какие патроны в него набиваются.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rubezh|Item|Magazine")
+	FName AmmoItem;
+
+	// Сколько патронов вмещает. Больше нуля — предмет считается магазином.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rubezh|Item|Magazine", Meta = (ClampMin = 0))
+	int32 MagazineCapacity = 0;
+
 	// --- Лечение (только для медицины; у остальных нули) ---
 
 	// Сколько секунд длится применение. 0 — предмет нельзя «использовать».

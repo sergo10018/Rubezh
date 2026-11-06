@@ -8,6 +8,7 @@
 
 class APawn;
 class UStaticMeshComponent;
+struct FRubezhInventoryEntry;
 struct FRubezhItemDefinition;
 
 /**
@@ -27,6 +28,9 @@ public:
 	/** Только сервер: положить стопку на землю перед персонажем. */
 	static ARubezhWorldItem* SpawnInFrontOf(APawn& Pawn, FName ItemId, int32 Count);
 
+	/** Только сервер: положить на землю стопку из рюкзака со всем её состоянием (патроны, прочность). */
+	static ARubezhWorldItem* SpawnEntryInFrontOf(APawn& Pawn, const FRubezhInventoryEntry& Entry);
+
 	/** Только сервер: положить стопку в указанное место. */
 	static ARubezhWorldItem* SpawnAt(UWorld& World, const FTransform& Transform, FName ItemId, int32 Count);
 
@@ -35,6 +39,9 @@ public:
 
 	/** Точка на земле перед персонажем, куда падает выброшенное (с небольшим разбросом). */
 	static FVector FindDropLocation(const APawn& Pawn);
+
+	/** Только сервер: чем стала бы эта стопка в рюкзаке. */
+	FRubezhInventoryEntry MakeEntry() const;
 
 	FName GetItemId() const { return ItemId; }
 	int32 GetCount() const { return Count; }
@@ -66,4 +73,10 @@ private:
 
 	UPROPERTY(VisibleAnywhere, Category = "Rubezh|Item")
 	TObjectPtr<UStaticMeshComponent> Mesh;
+
+	// Состояние штучного предмета: знает только сервер.
+	int32 Rounds = 0;
+	float Durability = 100.0f;
+	bool bHasMagazine = false;
+	bool bNextShotMisfires = false;
 };

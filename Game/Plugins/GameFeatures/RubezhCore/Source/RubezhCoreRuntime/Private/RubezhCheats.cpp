@@ -13,6 +13,7 @@
 #include "Health/RubezhHealthEffects.h"
 #include "Health/RubezhInjuryComponent.h"
 #include "Items/RubezhInventoryComponent.h"
+#include "Items/RubezhItemCatalog.h"
 #include "Items/RubezhLootContainer.h"
 #include "Items/RubezhPickupRules.h"
 #include "EngineUtils.h"
@@ -235,12 +236,18 @@ namespace
 		{
 			UE_LOG(LogRubezh, Display, TEXT("  [%s] %s"), Rubezh::Equipment::GetSlotName(Slot), *Inventory->GetEquipped(Slot).ToString());
 		}
+		const Rubezh::Weapons::FWeaponSlots& Weapons = Inventory->GetWeaponSlots();
+		for (int32 Index = 0; Index < Weapons.Num(); ++Index)
+		{
+			UE_LOG(LogRubezh, Display, TEXT("  [%s] %s, патронов %d, магазин %d, прочность %.2f"), Rubezh::Weapons::GetSlotName(Index),
+				*Weapons[Index].ItemId.ToString(), Weapons[Index].Rounds, Weapons[Index].bHasMagazine ? 1 : 0, Weapons[Index].Durability);
+		}
 		const FRubezhInventoryGrid& Grid = Inventory->GetGrid();
 		UE_LOG(LogRubezh, Display, TEXT("Рюкзак: занято %d из %d ячеек, вес %.2f кг"),
 			Grid.GetEntries().Num(), Grid.GetSlotCount(), Inventory->GetTotalWeight());
 		for (const FRubezhInventoryEntry& Entry : Grid.GetEntries())
 		{
-			UE_LOG(LogRubezh, Display, TEXT("  [%d] %s ×%d"), Entry.Slot, *Entry.ItemId.ToString(), Entry.Count);
+			UE_LOG(LogRubezh, Display, TEXT("  [%d] %s ×%d, патронов %d"), Entry.Slot, *Entry.ItemId.ToString(), Entry.Count, Entry.Rounds);
 		}
 
 		if (const ARubezhLootContainer* Container = Inventory->GetLootContainer())
@@ -252,6 +259,79 @@ namespace
 			{
 				UE_LOG(LogRubezh, Display, TEXT("  [%d] %s ×%d"), Entry.Slot, *Entry.ItemId.ToString(), Entry.Count);
 			}
+		}
+	}
+
+	/** Выдать заряженное оружие, два полных запасных магазина (или патроны к дробовику). */
+	void ArmPlayer(const TArray<FString>& Args, UWorld* World)
+	{
+		URubezhInventoryComponent* Inventory = FindLocalInventory(World);
+		const FName ItemId = Args.Num() > 0 ? FName(*Args[0]) : NAME_None;
+		const FRubezhWeaponDefinition* Weapon = Rubezh::Items::FindWeapon(ItemId);
+		if (!Inventory || !Weapon || !World || World->GetNetMode() == NM_Client)
+		{
+			UE_LOG(LogRubezh, Display, TEXT("Rubezh.Arm pistol_9x18|rifle_762x39|shotgun_12|rifle_762x54r — заряженное оружие и запас (только на сервере)"));
+			return;
+		}
+		if (!Inventory->GiveLoadedWeapon(ItemId))
+		{
+			UE_LOG(LogRubezh, Warning, TEXT("Rubezh.Arm: нет свободного подходящего слота"));
+			return;
+		}
+		if (const FRubezhItemDefinition* Magazine = Inventory->FindDefinition(Weapon->MagazineItem))
+		{
+			for (int32 Index = 0; Index < 2; ++Index)
+			{
+				FRubezhInventoryEntry Spare;
+				Spare.ItemId = Weapon->MagazineItem;
+				Spare.Count = 1;
+				Spare.Rounds = Magazine->MagazineCapacity;
+				Inventory->AddEntry(Spare);
+			}
+		}
+		else
+		{
+			Inventory->AddItem(Weapon->AmmoItem, Weapon->TubeCapacity * 2);
+		}
+	}
+
+	/** Задать прочность оружия в руках — чтобы проверить осечки. */
+	void WearWeapon(const TArray<FString>& Args, UWorld* World)
+	{
+		URubezhInventoryComponent* Inventory = FindLocalInventory(World);
+		if (!Inventory || Args.Num() < 1 || !World || World->GetNetMode() == NM_Client)
+		{
+			UE_LOG(LogRubezh, Display, TEXT("Rubezh.WeaponWear <проценты> — прочность оружия в руках (только на сервере)"));
+			return;
+		}
+		Inventory->SetWeaponDurability(Inventory->GetActiveWeaponSlot(), FCString::Atof(*Args[0]));
+	}
+
+	/** Набить или разрядить магазин в ячейке, бросить оружие — те же запросы, что шлёт окно рюкзака. */
+	void LoadMagazine(const TArray<FString>& Args, UWorld* World)
+	{
+		URubezhInventoryComponent* Inventory = FindLocalInventory(World);
+		if (Inventory && Args.Num() > 0)
+		{
+			Inventory->ServerStartLoadingMagazine(Inventory->GetGrid().FindEntryAt(FCString::Atoi(*Args[0])));
+		}
+	}
+
+	void UnloadMagazine(const TArray<FString>& Args, UWorld* World)
+	{
+		URubezhInventoryComponent* Inventory = FindLocalInventory(World);
+		if (Inventory && Args.Num() > 0)
+		{
+			Inventory->ServerUnloadMagazine(Inventory->GetGrid().FindEntryAt(FCString::Atoi(*Args[0])));
+		}
+	}
+
+	void DropWeapon(const TArray<FString>& Args, UWorld* World)
+	{
+		URubezhInventoryComponent* Inventory = FindLocalInventory(World);
+		if (Inventory && Args.Num() > 0)
+		{
+			Inventory->ServerDropWeapon(FCString::Atoi(*Args[0]));
 		}
 	}
 
@@ -354,6 +434,26 @@ namespace
 	FAutoConsoleCommandWithWorldAndArgs ShootCommand(
 		TEXT("Rubezh.Shoot"), TEXT("Попадание в себя через расчёт урона Lyra: Rubezh.Shoot <урон> [head|torso|arms|legs]"),
 		FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&ShootSelf));
+
+	FAutoConsoleCommandWithWorldAndArgs ArmCommand(
+		TEXT("Rubezh.Arm"), TEXT("Заряженное оружие и запас: Rubezh.Arm <ItemId>"),
+		FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&ArmPlayer));
+
+	FAutoConsoleCommandWithWorldAndArgs WeaponWearCommand(
+		TEXT("Rubezh.WeaponWear"), TEXT("Прочность оружия в руках: Rubezh.WeaponWear <проценты>"),
+		FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&WearWeapon));
+
+	FAutoConsoleCommandWithWorldAndArgs LoadMagazineCommand(
+		TEXT("Rubezh.LoadMag"), TEXT("Набить магазин патронами из рюкзака: Rubezh.LoadMag <ячейка>"),
+		FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&LoadMagazine));
+
+	FAutoConsoleCommandWithWorldAndArgs UnloadMagazineCommand(
+		TEXT("Rubezh.UnloadMag"), TEXT("Разрядить магазин: Rubezh.UnloadMag <ячейка>"),
+		FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&UnloadMagazine));
+
+	FAutoConsoleCommandWithWorldAndArgs DropWeaponCommand(
+		TEXT("Rubezh.DropWeapon"), TEXT("Бросить оружие из слота: Rubezh.DropWeapon <0|1|2>"),
+		FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&DropWeapon));
 
 	FAutoConsoleCommandWithWorldAndArgs CrateCommand(
 		TEXT("Rubezh.Crate"), TEXT("Ящик с лутом перед собой: Rubezh.Crate <military|medical|civil> [ячеек]"),

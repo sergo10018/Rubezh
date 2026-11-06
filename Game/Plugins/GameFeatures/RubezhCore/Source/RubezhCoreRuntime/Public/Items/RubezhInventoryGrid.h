@@ -25,6 +25,24 @@ struct RUBEZHCORERUNTIME_API FRubezhInventoryEntry
 	// Номер ячейки (0 — первая).
 	UPROPERTY(BlueprintReadOnly, Category = "Rubezh|Inventory")
 	int32 Slot = 0;
+
+	// Состояние штучных предметов (MaxStack = 1). У стопок не используется.
+
+	// Патроны: в магазине или в оружии.
+	UPROPERTY(BlueprintReadOnly, Category = "Rubezh|Inventory")
+	int32 Rounds = 0;
+
+	// Прочность оружия, проценты.
+	UPROPERTY(BlueprintReadOnly, Category = "Rubezh|Inventory")
+	float Durability = 100.0f;
+
+	// Вставлен ли в оружие магазин.
+	UPROPERTY(BlueprintReadOnly, Category = "Rubezh|Inventory")
+	bool bHasMagazine = false;
+
+	// Будет ли следующий выстрел осечкой. Решает сервер заранее; хранится с оружием, чтобы решение нельзя было переиграть, сняв и надев его.
+	UPROPERTY(BlueprintReadOnly, Category = "Rubezh|Inventory")
+	bool bNextShotMisfires = false;
 };
 
 /**
@@ -77,6 +95,18 @@ struct RUBEZHCORERUNTIME_API FRubezhInventoryGrid
 	/** Положить стопку в указанную ячейку (например, снятую куртку). false — ячейка занята или вне рюкзака. */
 	bool AddEntryAt(FName ItemId, int32 Count, int32 Slot, FRubezhItemLookup Lookup);
 
+	/** Положить стопку со всем её состоянием в свободную ячейку (Slot). false — ячейка занята или вне рюкзака. */
+	bool PlaceEntry(const FRubezhInventoryEntry& Entry, int32 Slot);
+
+	/**
+	 * Добавить стопку куда влезет, сохранив состояние штучного предмета (MaxStack = 1).
+	 * Возвращает, сколько не влезло.
+	 */
+	int32 AddEntry(const FRubezhInventoryEntry& Entry, const FRubezhItemDefinition& Definition);
+
+	/** Стопка для правки состояния (патроны, прочность). nullptr — такой стопки нет. */
+	FRubezhInventoryEntry* GetEntryMutable(int32 EntryIndex) { return Entries.IsValidIndex(EntryIndex) ? &Entries[EntryIndex] : nullptr; }
+
 	/**
 	 * Поменять число ячеек (сменили рюкзак). Вещи, ячейки которых остались, лежат на месте,
 	 * остальные переезжают в свободные. false — всё не влезет; тогда ничего не меняется.
@@ -91,8 +121,11 @@ struct RUBEZHCORERUNTIME_API FRubezhInventoryGrid
 
 	int32 CountItem(FName ItemId) const;
 
-	/** Вес всего содержимого, кг. Неизвестные предметы не учитываются. */
+	/** Вес всего содержимого, кг: вместе с патронами в магазинах и оружии. Неизвестные предметы не учитываются. */
 	float GetTotalWeight(FRubezhItemLookup Lookup) const;
+
+	/** Вес патронов внутри магазина или оружия. Definition.AmmoItem — чем заряжено. */
+	static float GetLoadedRoundsWeight(const FRubezhInventoryEntry& Entry, const FRubezhItemDefinition& Definition, FRubezhItemLookup Lookup);
 
 private:
 	UPROPERTY()

@@ -163,6 +163,27 @@ bool FRubezhInventoryGrid::AddEntryAt(FName ItemId, int32 Count, int32 Slot, FRu
 	return true;
 }
 
+bool FRubezhInventoryGrid::PlaceEntry(const FRubezhInventoryEntry& Entry, int32 Slot)
+{
+	if (!IsSlotFree(Slot))
+	{
+		return false;
+	}
+
+	FRubezhInventoryEntry& Placed = Entries.Add_GetRef(Entry);
+	Placed.Slot = Slot;
+	return true;
+}
+
+int32 FRubezhInventoryGrid::AddEntry(const FRubezhInventoryEntry& Entry, const FRubezhItemDefinition& Definition)
+{
+	if (Definition.MaxStack > 1)
+	{
+		return AddItem(Entry.ItemId, Definition, Entry.Count);
+	}
+	return PlaceEntry(Entry, FindFreeSlot()) ? 0 : Entry.Count;
+}
+
 bool FRubezhInventoryGrid::Resize(int32 NewSlotCount)
 {
 	if (NewSlotCount < 0 || Entries.Num() > NewSlotCount)
@@ -236,6 +257,12 @@ int32 FRubezhInventoryGrid::CountItem(FName ItemId) const
 	return Total;
 }
 
+float FRubezhInventoryGrid::GetLoadedRoundsWeight(const FRubezhInventoryEntry& Entry, const FRubezhItemDefinition& Definition, FRubezhItemLookup Lookup)
+{
+	const FRubezhItemDefinition* Ammo = Lookup(Definition.AmmoItem);
+	return Ammo ? Ammo->WeightKg * Entry.Rounds : 0.0f;
+}
+
 float FRubezhInventoryGrid::GetTotalWeight(FRubezhItemLookup Lookup) const
 {
 	float Total = 0.0f;
@@ -244,6 +271,10 @@ float FRubezhInventoryGrid::GetTotalWeight(FRubezhItemLookup Lookup) const
 		if (const FRubezhItemDefinition* Definition = Lookup(Entry.ItemId))
 		{
 			Total += Definition->WeightKg * Entry.Count;
+			if (Entry.Rounds > 0)
+			{
+				Total += GetLoadedRoundsWeight(Entry, *Definition, Lookup);
+			}
 		}
 	}
 	return Total;

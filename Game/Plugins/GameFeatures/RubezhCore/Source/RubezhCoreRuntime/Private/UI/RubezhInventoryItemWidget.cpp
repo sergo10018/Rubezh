@@ -11,6 +11,8 @@
 #include "Components/TextBlock.h"
 #include "Health/RubezhInjuryRules.h"
 #include "Items/RubezhEquipment.h"
+#include "Items/RubezhItemCatalog.h"
+#include "Items/RubezhWeaponDefinition.h"
 #include "UI/RubezhInventoryStyle.h"
 #include "UI/RubezhInventoryWindow.h"
 
@@ -73,7 +75,19 @@ void URubezhInventoryItemWidget::Setup(URubezhInventoryWindow* InWindow, ERubezh
 
 	Frame->SetBrushColor(GetCategoryColor(Definition.Category));
 	NameText->SetText(Definition.DisplayName);
-	CountText->SetText(Entry.Count > 1 ? FText::AsNumber(Entry.Count) : FText::GetEmpty());
+	// У магазина внизу — патроны, у оружия — прочность, у стопки — количество.
+	if (Definition.MagazineCapacity > 0)
+	{
+		CountText->SetText(FText::FromString(FString::Printf(TEXT("%d/%d"), Entry.Rounds, Definition.MagazineCapacity)));
+	}
+	else if (Rubezh::Items::FindWeapon(Entry.ItemId))
+	{
+		CountText->SetText(FText::FromString(FString::Printf(TEXT("%.0f %%"), Entry.Durability)));
+	}
+	else
+	{
+		CountText->SetText(Entry.Count > 1 ? FText::AsNumber(Entry.Count) : FText::GetEmpty());
+	}
 	SetToolTipText(BuildTooltip());
 	SetVisibility(InWindow ? ESlateVisibility::Visible : ESlateVisibility::HitTestInvisible);
 }
@@ -91,7 +105,15 @@ FText URubezhInventoryItemWidget::BuildTooltip() const
 	}
 	else
 	{
-		if (Rubezh::Injuries::IsMedical(Definition))
+		if (Rubezh::Items::FindWeapon(Entry.ItemId))
+		{
+			Hints.Add(TEXT("Двойной клик или перетащить в слот оружия — взять"));
+		}
+		else if (Definition.MagazineCapacity > 0)
+		{
+			Hints.Add(TEXT("Перетащите на него патроны — набить, двойной клик — разрядить"));
+		}
+		else if (Rubezh::Injuries::IsMedical(Definition))
 		{
 			Hints.Add(TEXT("Двойной клик — применить"));
 		}
@@ -105,8 +127,18 @@ FText URubezhInventoryItemWidget::BuildTooltip() const
 		}
 	}
 
-	return FText::FromString(FString::Printf(TEXT("%s\n%s%d шт. × %.3g кг = %.2f кг\n%s"),
-		*Definition.DisplayName.ToString(), Stats.IsEmpty() ? TEXT("") : *(Stats + TEXT("\n")),
+	FString State;
+	if (Definition.MagazineCapacity > 0)
+	{
+		State = FString::Printf(TEXT("Патронов: %d из %d\n"), Entry.Rounds, Definition.MagazineCapacity);
+	}
+	else if (Rubezh::Items::FindWeapon(Entry.ItemId))
+	{
+		State = FString::Printf(TEXT("Прочность: %.0f %%, заряжено: %d\n"), Entry.Durability, Entry.Rounds);
+	}
+
+	return FText::FromString(FString::Printf(TEXT("%s\n%s%s%d шт. × %.3g кг = %.2f кг\n%s"),
+		*Definition.DisplayName.ToString(), Stats.IsEmpty() ? TEXT("") : *(Stats + TEXT("\n")), *State,
 		Entry.Count, Definition.WeightKg, StackWeight, *FString::Join(Hints, TEXT("\n"))));
 }
 

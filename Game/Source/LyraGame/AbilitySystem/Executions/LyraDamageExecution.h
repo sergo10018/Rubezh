@@ -16,6 +16,12 @@ struct FHitResult;
  */
 DECLARE_DELEGATE_RetVal_TwoParams(float, FLyraIncomingDamageMultiplier, const UAbilitySystemComponent* /*Target*/, const FHitResult* /*Hit*/);
 
+/**
+ * Rubezh: damage of the weapon that fired, instead of the value stored in the damage effect.
+ * Item is the inventory item the weapon was created from, Distance is in centimeters. A negative result keeps the effect's value.
+ */
+DECLARE_DELEGATE_RetVal_TwoParams(float, FLyraWeaponDamageOverride, const UObject* /*Item*/, double /*Distance*/);
+
 
 /**
  * ULyraDamageExecution
@@ -33,6 +39,9 @@ public:
 
 	/** Rubezh: optional target-side damage multiplier (armor). Unbound means 1. */
 	static LYRAGAME_API FLyraIncomingDamageMultiplier& GetIncomingDamageMultiplier();
+
+	/** Rubezh: optional damage of the firing weapon. Unbound means the effect's own value. */
+	static LYRAGAME_API FLyraWeaponDamageOverride& GetWeaponDamageOverride();
 
 protected:
 

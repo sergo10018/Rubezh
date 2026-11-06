@@ -5,6 +5,7 @@
 #include "Components/ActorComponent.h"
 #include "Items/RubezhEquipment.h"
 #include "Items/RubezhInventoryGrid.h"
+#include "Items/RubezhWeaponRules.h"
 
 #include "RubezhInventoryComponent.generated.h"
 
@@ -14,6 +15,9 @@ class ARubezhLootContainer;
 class UAbilitySystemComponent;
 class UDataTable;
 class ULyraHealthComponent;
+class ULyraInventoryItemInstance;
+class ULyraQuickBarComponent;
+struct FGameplayEventData;
 struct FHitResult;
 struct FOnAttributeChangeData;
 
@@ -44,6 +48,9 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Rubezh|Inventory")
 	int32 AddItem(FName ItemId, int32 Count);
 
+	/** Только сервер: добавить стопку с её состоянием (патроны, прочность). Возвращает, сколько не влезло. */
+	int32 AddEntry(const FRubezhInventoryEntry& Entry);
+
 	/** Только сервер. Возвращает, сколько убрано. */
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Rubezh|Inventory")
 	int32 RemoveItem(FName ItemId, int32 Count);
@@ -67,6 +74,50 @@ public:
 	/** Снять и бросить на землю. Рюкзак с вещами падает вместе с ними — его можно обыскать или надеть обратно. */
 	UFUNCTION(Server, Reliable)
 	void ServerDropEquipped(ERubezhEquipSlot Slot);
+
+	// --- Оружие (RubezhInventoryComponent_Weapons.cpp) ---
+
+	/** Взять оружие из рюкзака в слот (INDEX_NONE — подходящий сам). */
+	UFUNCTION(Server, Reliable)
+	void ServerEquipWeapon(int32 EntryIndex, int32 WeaponSlot);
+
+	/** Убрать оружие из слота в ячейку Cell (INDEX_NONE — куда влезет). */
+	UFUNCTION(Server, Reliable)
+	void ServerUnequipWeapon(int32 WeaponSlot, int32 Cell);
+
+	/** Бросить оружие из слота на землю. */
+	UFUNCTION(Server, Reliable)
+	void ServerDropWeapon(int32 WeaponSlot);
+
+	/** Начать набивать магазин патронами из рюкзака (по одному, пока открыто окно). */
+	UFUNCTION(Server, Reliable)
+	void ServerStartLoadingMagazine(int32 EntryIndex);
+
+	/** Перестать набивать магазин. */
+	UFUNCTION(Server, Reliable)
+	void ServerStopLoadingMagazine();
+
+	/** Разрядить магазин в рюкзак. */
+	UFUNCTION(Server, Reliable)
+	void ServerUnloadMagazine(int32 EntryIndex);
+
+	/** Оружие в слотах (длина Rubezh::Weapons::SlotCount, пустой ItemId — слот свободен). */
+	const Rubezh::Weapons::FWeaponSlots& GetWeaponSlots() const { return WeaponSlots; }
+
+	/** Только сервер (для проверки): задать прочность оружия в слоте. */
+	void SetWeaponDurability(int32 WeaponSlot, float Durability);
+
+	/** Только сервер (для проверки): дать заряженное оружие в слот. */
+	bool GiveLoadedWeapon(FName ItemId);
+
+	/** Только сервер (для проверки): какой слот оружия сейчас в руках, INDEX_NONE — никакой. */
+	int32 GetActiveWeaponSlot() const;
+
+	/** Для расчёта урона Lyra: урон пули с учётом дистанции; меньше нуля — оружие не наше. */
+	static float GetWeaponDamage(const UObject* LyraItem, double DistanceCm);
+
+	/** Выстрел принят (сервер и клиент стрелявшего). false — осечка. */
+	static bool HandleShotCommitted(UObject* LyraItem, APawn* Pawn);
 
 	// --- Обыск ---
 
@@ -180,12 +231,42 @@ private:
 	ARubezhLootContainer* GetReachableLoot() const;
 	void OpenWindowForLocalPlayer() const;
 	void DropBodyOnDeath(const APawn& Pawn);
+
+	// Оружие (RubezhInventoryComponent_Weapons.cpp).
+	void ApplyStartingWeapons();
+	void BindReloadEvent();
+	void UnbindReloadEvent();
+	void HandleReloadDone(const FGameplayEventData* EventData);
+	void FinishReload();
+	void HandleWeaponsChanged();
+	void RebuildWeaponInstances();
+	void TryCreateWeaponInstances();
+	void ClearWeaponInstances();
+	void CreateWeaponInstance(int32 WeaponSlot);
+	void SyncWeaponTags() const;
+	void RollNextShot(FRubezhInventoryEntry& Weapon) const;
+	bool IsOwnerDead() const;
+	void HandleServerShot(ULyraInventoryItemInstance& Item);
+	void ApplyRecoil(const FRubezhWeaponDefinition& Weapon, APawn& Pawn);
+	void LoadNextRound();
+	ULyraQuickBarComponent* FindQuickBar() const;
+	const FRubezhWeaponDefinition* FindWeaponByInstance(const ULyraInventoryItemInstance& Item) const;
+	int32 FindWeaponSlot(const ULyraInventoryItemInstance& Item) const;
 	double GetServerTime() const;
 
 	FDelegateHandle CarriedWeightChangedHandle;
 	FTimerHandle WeightSyncTimer;
 	FTimerHandle SearchTimer;
 	FTimerHandle LootReachTimer;
+	FTimerHandle WeaponInstanceTimer;
+	FTimerHandle MagazineLoadTimer;
+	FDelegateHandle ReloadEventHandle;
+	int32 ActiveWeaponSlotBeforeRebuild = INDEX_NONE;
+	int32 LoadingMagazineCell = INDEX_NONE;
+	int32 ReloadingWeaponSlot = INDEX_NONE;
+	int32 WeaponInstanceRetries = 0;
+	int32 ShotsInBurst = 0;
+	double LastShotTime = 0.0;
 	TWeakObjectPtr<ULyraHealthComponent> BoundHealth;
 
 	UPROPERTY(ReplicatedUsing = OnRep_Grid)
@@ -194,6 +275,14 @@ private:
 	// Надетое по слотам (порядок — Rubezh::Equipment::AllSlots).
 	UPROPERTY(ReplicatedUsing = OnRep_Grid)
 	TArray<FName> Equipped;
+
+	// Оружие в слотах. Числа на экземплярах Lyra (патроны для стрельбы и счётчика) — лишь их копия.
+	UPROPERTY(ReplicatedUsing = OnRep_Grid)
+	TArray<FRubezhInventoryEntry> WeaponSlots;
+
+	// Предметы Lyra, созданные для оружия в слотах (только сервер); индексы как у WeaponSlots.
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<ULyraInventoryItemInstance>> WeaponInstances;
 
 	// Что открыто для обыска и копия его содержимого (видит только владелец).
 	UPROPERTY(ReplicatedUsing = OnRep_LootContainer)

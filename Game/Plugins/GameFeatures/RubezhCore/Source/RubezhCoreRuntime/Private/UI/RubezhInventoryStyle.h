@@ -20,7 +20,7 @@ namespace Rubezh::InventoryStyle
 	inline constexpr float DraggedItemOpacity = 0.35f;
 
 	// Колонка снаряжения слева от сетки.
-	inline constexpr float EquipSlotWidth = 190.0f;
+	inline constexpr float EquipSlotWidth = 270.0f;
 	inline constexpr float EquipSlotHeight = 58.0f;
 	inline constexpr float EquipSlotGap = 6.0f;
 	inline constexpr float ColumnGap = 20.0f;

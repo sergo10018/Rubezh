@@ -42,3 +42,8 @@ civ_jacket_padded,civil,jacket_padded,6,1,1
 civ_pants_padded,civil,pants_padded,6,1,1
 civ_backpack_tourist,civil,backpack_tourist,4,1,1
 civ_documents,civil,documents,5,1,1
+mil_mag_762x39,military,mag_762x39,45,1,2
+mil_mag_9x18,military,mag_9x18,30,1,2
+mil_mag_762x54r,military,mag_762x54r,10,1,1
+mil_sniper,military,rifle_762x54r,2,1,1
+civ_shotgun,civil,shotgun_12,4,1,1

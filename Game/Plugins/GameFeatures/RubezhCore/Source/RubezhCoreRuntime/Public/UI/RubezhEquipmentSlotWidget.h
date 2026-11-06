@@ -3,6 +3,7 @@
 #pragma once
 
 #include "Blueprint/UserWidget.h"
+#include "Items/RubezhInventoryGrid.h"
 #include "Items/RubezhItemDefinition.h"
 
 #include "RubezhEquipmentSlotWidget.generated.h"
@@ -12,7 +13,7 @@ class URubezhInventoryWindow;
 class UTextBlock;
 
 /**
- * Слот снаряжения в окне рюкзака: название слота и надетый предмет.
+ * Слот снаряжения или оружия в окне рюкзака: название слота и предмет в нём.
  * Перетащить сюда предмет из рюкзака — надеть; перетащить отсюда в рюкзак — снять, за окно — бросить
  * (рюкзак падает вместе с вещами); двойной клик — снять в рюкзак. Собран кодом, без ассета виджета.
  */
@@ -23,6 +24,14 @@ class RUBEZHCORERUNTIME_API URubezhEquipmentSlotWidget : public UUserWidget
 
 public:
 	void Setup(URubezhInventoryWindow* InWindow, ERubezhEquipSlot InEquipSlot);
+
+	/** Сделать слотом оружия: 0 и 1 — основное, 2 — пистолет. */
+	void SetupWeapon(URubezhInventoryWindow* InWindow, int32 InWeaponSlot);
+
+	/** Показать оружие в слоте (Item == nullptr — слот пуст). */
+	void SetWeapon(const FRubezhInventoryEntry& Entry, const FRubezhItemDefinition* Item);
+
+	int32 GetWeaponSlot() const { return WeaponSlot; }
 
 	/** Показать надетое (Item == nullptr — слот пуст). */
 	void SetItem(FName InItemId, const FRubezhItemDefinition* Item);
@@ -46,6 +55,8 @@ private:
 
 	TWeakObjectPtr<URubezhInventoryWindow> Window;
 	ERubezhEquipSlot EquipSlot = ERubezhEquipSlot::None;
+	int32 WeaponSlot = INDEX_NONE;
+	FRubezhInventoryEntry WeaponEntry;
 	FName ItemId;
 	FRubezhItemDefinition Definition;
 

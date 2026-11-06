@@ -22,6 +22,7 @@
 #include "Health/RubezhInjuryRules.h"
 #include "Items/RubezhEquipment.h"
 #include "Items/RubezhInventoryComponent.h"
+#include "Items/RubezhItemCatalog.h"
 #include "Items/RubezhLootContainer.h"
 #include "Items/RubezhLootRules.h"
 #include "RubezhSettings.h"
@@ -106,6 +107,15 @@ UWidget* URubezhInventoryWindow::BuildEquipmentColumn()
 
 	UVerticalBox* Column = WidgetTree->ConstructWidget<UVerticalBox>();
 	Column->AddChildToVerticalBox(MakeText(*WidgetTree, FText::FromString(TEXT("Снаряжение")), TitleFontSize));
+	AddSpacer(*WidgetTree, *Column, SectionSpacing);
+
+	for (int32 Index = 0; Index < Rubezh::Weapons::SlotCount; ++Index)
+	{
+		URubezhEquipmentSlotWidget* SlotWidget = CreateWidget<URubezhEquipmentSlotWidget>(this);
+		SlotWidget->SetupWeapon(this, Index);
+		Column->AddChildToVerticalBox(SlotWidget)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, EquipSlotGap));
+		WeaponSlotWidgets.Add(SlotWidget);
+	}
 	AddSpacer(*WidgetTree, *Column, SectionSpacing);
 
 	for (const ERubezhEquipSlot EquipSlot : Rubezh::Equipment::AllSlots)
@@ -217,6 +227,7 @@ void URubezhInventoryWindow::NativeOnDeactivated()
 	if (URubezhInventoryComponent* Inventory = BoundInventory.Get())
 	{
 		Inventory->OnInventoryChanged.RemoveDynamic(this, &ThisClass::Refresh);
+		Inventory->ServerStopLoadingMagazine();
 		if (Inventory->GetLootContainer())
 		{
 			Inventory->ServerCloseLoot();
@@ -299,6 +310,14 @@ void URubezhInventoryWindow::RefreshEquipment(const URubezhInventoryComponent& I
 		SlotWidget->SetRenderOpacity(1.0f);
 	}
 
+	const Rubezh::Weapons::FWeaponSlots& Weapons = Inventory.GetWeaponSlots();
+	for (URubezhEquipmentSlotWidget* SlotWidget : WeaponSlotWidgets)
+	{
+		const FRubezhInventoryEntry Entry = Weapons.IsValidIndex(SlotWidget->GetWeaponSlot()) ? Weapons[SlotWidget->GetWeaponSlot()] : FRubezhInventoryEntry();
+		SlotWidget->SetWeapon(Entry, Entry.ItemId.IsNone() ? nullptr : Inventory.FindDefinition(Entry.ItemId));
+		SlotWidget->SetRenderOpacity(1.0f);
+	}
+
 	const FName Backpack = Inventory.GetEquipped(ERubezhEquipSlot::Backpack);
 	const FRubezhItemDefinition* BackpackItem = Backpack.IsNone() ? nullptr : Inventory.FindDefinition(Backpack);
 	const FRubezhInventoryGrid& Grid = Inventory.GetGrid();
@@ -372,7 +391,17 @@ void URubezhInventoryWindow::Activate(ERubezhItemSource Source, int32 EntryIndex
 	}
 
 	const FRubezhItemDefinition* Item = FindEntryDefinition(EntryIndex);
-	if (Item && Rubezh::Injuries::IsMedical(*Item))
+	const URubezhInventoryComponent* Inventory = BoundInventory.Get();
+	const FRubezhInventoryEntry* Entry = (Item && Inventory) ? &Inventory->GetGrid().GetEntries()[EntryIndex] : nullptr;
+	if (Entry && Rubezh::Items::FindWeapon(Entry->ItemId))
+	{
+		RequestEquipWeapon(EntryIndex, {});
+	}
+	else if (Entry && Item->MagazineCapacity > 0)
+	{
+		BoundInventory->ServerUnloadMagazine(EntryIndex);
+	}
+	else if (Item && Rubezh::Injuries::IsMedical(*Item))
 	{
 		RequestUse(EntryIndex);
 	}
@@ -398,7 +427,7 @@ void URubezhInventoryWindow::HandleGridDrop(ERubezhItemSource Target, int32 Cell
 		{
 			PutIntoLoot(Operation.EntryIndex, Cell);
 		}
-		else if (Cell != INDEX_NONE)
+		else if (Cell != INDEX_NONE && !TryLoadMagazine(Operation, Cell))
 		{
 			Inventory->ServerMoveEntry(Operation.EntryIndex, Cell);
 		}
@@ -412,6 +441,14 @@ void URubezhInventoryWindow::HandleGridDrop(ERubezhItemSource Target, int32 Cell
 		else if (Cell != INDEX_NONE)
 		{
 			Inventory->ServerMoveLootEntry(Operation.EntryIndex, Operation.ItemId, Cell);
+		}
+		break;
+
+	case ERubezhItemSource::Weapon:
+		if (bToBackpack)
+		{
+			RequestUnequipWeapon(Operation.FromWeaponSlot, Cell == INDEX_NONE ? TOptional<int32>() : TOptional<int32>(Cell));
+			return;
 		}
 		break;
 
@@ -547,6 +584,69 @@ void URubezhInventoryWindow::RequestUnequip(ERubezhEquipSlot EquipSlot, TOptiona
 	Refresh();
 }
 
+void URubezhInventoryWindow::RequestEquipWeapon(int32 EntryIndex, TOptional<int32> WeaponSlot)
+{
+	URubezhInventoryComponent* Inventory = BoundInventory.Get();
+	if (!Inventory)
+	{
+		return;
+	}
+
+	FRubezhInventoryGrid Grid = Inventory->GetGrid();
+	Rubezh::Weapons::FWeaponSlots Slots = Inventory->GetWeaponSlots();
+	const Rubezh::Weapons::EResult Result = Rubezh::Weapons::Equip(Grid, Slots, EntryIndex, WeaponSlot, [](FName Id) { return Rubezh::Items::FindWeapon(Id); });
+	if (Result != Rubezh::Weapons::EResult::Ok)
+	{
+		ShowError(Rubezh::Weapons::Describe(Result));
+	}
+	else
+	{
+		Inventory->ServerEquipWeapon(EntryIndex, WeaponSlot.Get(INDEX_NONE));
+	}
+	Refresh();
+}
+
+void URubezhInventoryWindow::RequestUnequipWeapon(int32 WeaponSlot, TOptional<int32> Cell)
+{
+	URubezhInventoryComponent* Inventory = BoundInventory.Get();
+	if (!Inventory)
+	{
+		return;
+	}
+
+	FRubezhInventoryGrid Grid = Inventory->GetGrid();
+	Rubezh::Weapons::FWeaponSlots Slots = Inventory->GetWeaponSlots();
+	const Rubezh::Weapons::EResult Result = Rubezh::Weapons::Unequip(Grid, Slots, WeaponSlot, Cell);
+	if (Result != Rubezh::Weapons::EResult::Ok)
+	{
+		ShowError(Rubezh::Weapons::Describe(Result));
+	}
+	else
+	{
+		Inventory->ServerUnequipWeapon(WeaponSlot, Cell.Get(INDEX_NONE));
+	}
+	Refresh();
+}
+
+bool URubezhInventoryWindow::TryLoadMagazine(const URubezhInventoryDragOperation& Operation, int32 Cell)
+{
+	URubezhInventoryComponent* Inventory = BoundInventory.Get();
+	if (!Inventory)
+	{
+		return false;
+	}
+
+	const int32 MagazineIndex = Inventory->GetGrid().FindEntryAt(Cell);
+	const FRubezhItemDefinition* Magazine = MagazineIndex == INDEX_NONE ? nullptr : FindEntryDefinition(MagazineIndex);
+	if (!Magazine || Magazine->MagazineCapacity <= 0 || Magazine->AmmoItem != Operation.ItemId)
+	{
+		return false;
+	}
+
+	Inventory->ServerStartLoadingMagazine(MagazineIndex);
+	return true;
+}
+
 void URubezhInventoryWindow::RequestUse(int32 EntryIndex)
 {
 	const URubezhInventoryComponent* Inventory = BoundInventory.Get();
@@ -608,6 +708,10 @@ bool URubezhInventoryWindow::NativeOnDrop(const FGeometry& InGeometry, const FDr
 		{
 			Inventory->ServerDropEquipped(Operation->FromSlot);
 		}
+		else if (Operation->Source == ERubezhItemSource::Weapon)
+		{
+			Inventory->ServerDropWeapon(Operation->FromWeaponSlot);
+		}
 		else if (Operation->Source == ERubezhItemSource::Backpack)
 		{
 			Inventory->ServerDropEntry(Operation->EntryIndex);
@@ -658,6 +762,6 @@ void URubezhInventoryWindow::ShowGroundHint(bool bShow)
 
 	const FString CloseKey = GetDefault<URubezhSettings>()->InventoryKey.GetDisplayName().ToString();
 	HintLine->SetText(FText::FromString(FString::Printf(
-		TEXT("ЛКМ — переложить · ПКМ — в ящик и обратно · двойной клик — применить, надеть, забрать · за окно — выбросить · %s — закрыть"), *CloseKey)));
+		TEXT("ЛКМ — переложить · патроны на магазин — набить · ПКМ — в ящик и обратно · двойной клик — применить, надеть, забрать, разрядить · за окно — выбросить · %s — закрыть"), *CloseKey)));
 	HintLine->SetColorAndOpacity(FSlateColor(HintText));
 }

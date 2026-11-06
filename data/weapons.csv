@@ -1,0 +1,5 @@
+---,WeaponClass,AmmoItem,MagazineItem,TubeCapacity,Damage,Pellets,ShotsPerMinute,bSemiAuto,EffectiveRangeM,RecoilPitch,RecoilYaw,RecoilGrowth,LyraItem
+pistol_9x18,Sidearm,ammo_9x18,mag_9x18,0,28,1,300,True,25,0.7,0.25,0.05,/ShooterCore/Weapons/Pistol/ID_Pistol.ID_Pistol_C
+rifle_762x39,Primary,ammo_762x39,mag_762x39,0,34,1,600,False,150,0.45,0.2,0.1,/ShooterCore/Weapons/Rifle/ID_Rifle.ID_Rifle_C
+shotgun_12,Primary,ammo_12_70,None,6,9,8,70,True,20,2.2,0.5,0,/ShooterCore/Weapons/Shotgun/ID_Shotgun.ID_Shotgun_C
+rifle_762x54r,Primary,ammo_762x54r,mag_762x54r,0,75,1,120,True,400,1.8,0.3,0.05,/RubezhCore/Weapons/Sniper/ID_RubezhSniper.ID_RubezhSniper_C

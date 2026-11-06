@@ -28,6 +28,11 @@ namespace RubezhGameplayTags
 	RUBEZHCORERUNTIME_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(SetByCaller_Damage);
 	RUBEZHCORERUNTIME_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(SetByCaller_Healing);
 
+	/** Числа на экземпляре оружия Lyra: урон одной пули, эффективная дальность (м), будет ли следующий выстрел осечкой (1 или 0). */
+	RUBEZHCORERUNTIME_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Weapon_Damage);
+	RUBEZHCORERUNTIME_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Weapon_EffectiveRange);
+	RUBEZHCORERUNTIME_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Weapon_NextShotMisfires);
+
 	/** SetByCaller: изменение выносливости за один период эффекта. */
 	RUBEZHCORERUNTIME_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(SetByCaller_StaminaDelta);
 }

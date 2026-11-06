@@ -34,7 +34,14 @@ public:
 protected:
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
+public:
+	/** Коротко показать сообщение под прицелом (например, «Осечка»). Только у своего игрока. */
+	void ShowNotice(const FString& Text);
+
 private:
+	FString Notice;
+	double NoticeEndTime = 0.0;
+
 	UFUNCTION(Server, Reliable)
 	void ServerPickUp(ARubezhWorldItem* Item);
 
