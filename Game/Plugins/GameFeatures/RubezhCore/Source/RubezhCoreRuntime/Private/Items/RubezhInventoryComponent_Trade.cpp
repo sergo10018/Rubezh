@@ -127,33 +127,56 @@ void URubezhInventoryComponent::ServerSellEntry_Implementation(int32 Cell, FName
 	}
 }
 
-bool URubezhInventoryComponent::CanRepairHere() const
+bool URubezhInventoryComponent::CanRepairHere(FName ItemId) const
 {
 	const ARubezhTrader* Trader = GetReachableTrader();
-	return Trader && Trader->GetKind() == ERubezhTraderKind::Gunsmith;
+	const FRubezhItemDefinition* Item = FindDefinition(ItemId);
+	if (!Trader || !Item)
+	{
+		return false;
+	}
+	// Оружие чинит оружейник, броню и одежду — бронник.
+	return Trader->GetKind() == ERubezhTraderKind::Gunsmith ? Rubezh::Items::FindWeapon(ItemId) != nullptr
+		: Trader->GetKind() == ERubezhTraderKind::Armorer && Rubezh::Equipment::CanWear(*Item);
 }
 
 void URubezhInventoryComponent::ServerRepairEntry_Implementation(int32 Cell, FName ItemId)
 {
 	FRubezhInventoryEntry* Entry = Grid.GetEntryMutable(Grid.FindEntryAt(Cell));
-	if (CanRepairHere() && Entry && Entry->ItemId == ItemId)
+	if (Entry && Entry->ItemId == ItemId && CanRepairHere(ItemId))
 	{
-		RepairWeaponEntry(*Entry);
+		RepairEntry(*Entry);
 	}
 }
 
 void URubezhInventoryComponent::ServerRepairWeapon_Implementation(int32 WeaponSlot)
 {
-	if (CanRepairHere() && WeaponSlots.IsValidIndex(WeaponSlot) && !WeaponSlots[WeaponSlot].ItemId.IsNone())
+	if (WeaponSlots.IsValidIndex(WeaponSlot) && CanRepairHere(WeaponSlots[WeaponSlot].ItemId))
 	{
-		RepairWeaponEntry(WeaponSlots[WeaponSlot]);
+		RepairEntry(WeaponSlots[WeaponSlot]);
 	}
 }
 
-void URubezhInventoryComponent::RepairWeaponEntry(FRubezhInventoryEntry& Entry)
+void URubezhInventoryComponent::ServerRepairEquipped_Implementation(ERubezhEquipSlot Slot)
+{
+	const FName ItemId = GetEquipped(Slot);
+	if (ItemId.IsNone() || !CanRepairHere(ItemId))
+	{
+		return;
+	}
+
+	FRubezhInventoryEntry Entry;
+	Entry.ItemId = ItemId;
+	Entry.Count = 1;
+	Entry.Durability = GetEquippedDurability(Slot);
+	RepairEntry(Entry);
+	SetEquippedDurability(Slot, Entry.Durability);
+}
+
+void URubezhInventoryComponent::RepairEntry(FRubezhInventoryEntry& Entry)
 {
 	const FRubezhItemDefinition* Item = FindDefinition(Entry.ItemId);
-	if (!Item || !Rubezh::Items::FindWeapon(Entry.ItemId))
+	if (!Item)
 	{
 		return;
 	}
@@ -163,7 +186,10 @@ void URubezhInventoryComponent::RepairWeaponEntry(FRubezhInventoryEntry& Entry)
 	if (Result == Rubezh::Trade::EResult::Ok)
 	{
 		// Осечка следующего выстрела была решена для старой прочности.
-		RollNextShot(Entry);
+		if (Rubezh::Items::FindWeapon(Entry.ItemId))
+		{
+			RollNextShot(Entry);
+		}
 		HandleGridChanged();
 	}
 }

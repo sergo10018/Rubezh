@@ -25,6 +25,36 @@ namespace Rubezh::Equipment
 			const int32 NewCount = GetSlotCount(Equipped, Lookup, PocketSlots);
 			return NewCount == Grid.GetSlotCount() || Grid.Resize(NewCount);
 		}
+
+		float GetDurability(const FEquippedWear* Wear, int32 Index)
+		{
+			return (Wear && Wear->IsValidIndex(Index)) ? (*Wear)[Index] : MaxGearDurability;
+		}
+
+		FEquippedWear NormalizedWear(const FEquippedWear* Wear)
+		{
+			FEquippedWear Result;
+			Result.Init(MaxGearDurability, SlotCount);
+			for (int32 Index = 0; Wear && Index < SlotCount && Index < Wear->Num(); ++Index)
+			{
+				Result[Index] = (*Wear)[Index];
+			}
+			return Result;
+		}
+
+		FRubezhInventoryEntry MakeGearEntry(FName ItemId, float Durability)
+		{
+			FRubezhInventoryEntry Entry;
+			Entry.ItemId = ItemId;
+			Entry.Count = 1;
+			Entry.Durability = Durability;
+			return Entry;
+		}
+	}
+
+	bool CanWear(const FRubezhItemDefinition& Item)
+	{
+		return Item.EquipSlot != ERubezhEquipSlot::None && (Item.Protection > 0.0f || Item.BleedProtection > 0.0f);
 	}
 
 	int32 GetSlotIndex(ERubezhEquipSlot Slot)
@@ -96,7 +126,7 @@ namespace Rubezh::Equipment
 		return ERubezhBodyZone::Torso;
 	}
 
-	FProtection GetProtection(const FEquipped& Equipped, ERubezhBodyZone Zone, FRubezhItemLookup Lookup)
+	FProtection GetProtection(const FEquipped& Equipped, ERubezhBodyZone Zone, FRubezhItemLookup Lookup, const FEquippedWear* Wear)
 	{
 		FProtection Result;
 		for (int32 Index = 0; Index < SlotCount && Index < Equipped.Num(); ++Index)
@@ -104,11 +134,25 @@ namespace Rubezh::Equipment
 			const FRubezhItemDefinition* Item = Equipped[Index].IsNone() ? nullptr : Lookup(Equipped[Index]);
 			if (Item && Covers(AllSlots[Index], Zone))
 			{
-				Result.DamageMultiplier *= 1.0f - FMath::Clamp(Item->Protection, 0.0f, 95.0f) * 0.01f;
-				Result.BleedChanceMultiplier *= 1.0f - FMath::Clamp(Item->BleedProtection, 0.0f, 100.0f) * 0.01f;
+				const float Condition = FMath::Clamp(GetDurability(Wear, Index), 0.0f, MaxGearDurability) / MaxGearDurability;
+				Result.DamageMultiplier *= 1.0f - FMath::Clamp(Item->Protection, 0.0f, 95.0f) * 0.01f * Condition;
+				Result.BleedChanceMultiplier *= 1.0f - FMath::Clamp(Item->BleedProtection, 0.0f, 100.0f) * 0.01f * Condition;
 			}
 		}
 		return Result;
+	}
+
+	void ApplyHitWear(const FEquipped& Equipped, FEquippedWear& Wear, ERubezhBodyZone Zone, float RawDamage, FRubezhItemLookup Lookup)
+	{
+		Wear = NormalizedWear(&Wear);
+		for (int32 Index = 0; Index < SlotCount && Index < Equipped.Num(); ++Index)
+		{
+			const FRubezhItemDefinition* Item = Equipped[Index].IsNone() ? nullptr : Lookup(Equipped[Index]);
+			if (Item && CanWear(*Item) && Covers(AllSlots[Index], Zone))
+			{
+				Wear[Index] = FMath::Max(Wear[Index] - FMath::Max(RawDamage, 0.0f) * WearPerDamagePoint, 0.0f);
+			}
+		}
 	}
 
 	int32 GetSlotCount(const FEquipped& Equipped, FRubezhItemLookup Lookup, int32 PocketSlots)
@@ -171,7 +215,7 @@ namespace Rubezh::Equipment
 		}
 	}
 
-	EResult Equip(FRubezhInventoryGrid& Grid, FEquipped& Equipped, int32 EntryIndex, FRubezhItemLookup Lookup, int32 PocketSlots)
+	EResult Equip(FRubezhInventoryGrid& Grid, FEquipped& Equipped, int32 EntryIndex, FRubezhItemLookup Lookup, int32 PocketSlots, FEquippedWear* Wear)
 	{
 		if (!Grid.GetEntries().IsValidIndex(EntryIndex))
 		{
@@ -188,6 +232,7 @@ namespace Rubezh::Equipment
 		// Всё делаем на копиях и сохраняем, только если получилось целиком.
 		FRubezhInventoryGrid NewGrid = Grid;
 		FEquipped NewEquipped = Normalized(Equipped);
+		FEquippedWear NewWear = NormalizedWear(Wear);
 
 		NewGrid.ReduceEntry(EntryIndex, 1);
 
@@ -201,14 +246,19 @@ namespace Rubezh::Equipment
 		if (!Previous.IsNone())
 		{
 			const FRubezhItemDefinition* PreviousItem = Lookup(Previous);
-			if (!PreviousItem || NewGrid.AddItem(Previous, *PreviousItem, 1) != 0)
+			if (!PreviousItem || NewGrid.AddEntry(MakeGearEntry(Previous, NewWear[SlotIndex]), *PreviousItem) != 0)
 			{
 				return EResult::NoRoom;
 			}
 		}
 
+		NewWear[SlotIndex] = Entry.Durability;
 		Grid = MoveTemp(NewGrid);
 		Equipped = MoveTemp(NewEquipped);
+		if (Wear)
+		{
+			*Wear = MoveTemp(NewWear);
+		}
 		return EResult::Ok;
 	}
 
@@ -236,7 +286,7 @@ namespace Rubezh::Equipment
 	}
 
 	EResult Unequip(FRubezhInventoryGrid& Grid, FEquipped& Equipped, ERubezhEquipSlot Slot,
-		TOptional<int32> TargetSlot, FRubezhItemLookup Lookup, int32 PocketSlots)
+		TOptional<int32> TargetSlot, FRubezhItemLookup Lookup, int32 PocketSlots, FEquippedWear* Wear)
 	{
 		FRubezhInventoryGrid NewGrid = Grid;
 		FEquipped NewEquipped = Equipped;
@@ -248,9 +298,21 @@ namespace Rubezh::Equipment
 		}
 
 		const FRubezhItemDefinition* Item = Lookup(ItemId);
-		const bool bPlaced = Item && (TargetSlot.IsSet()
-			? NewGrid.AddEntryAt(ItemId, 1, TargetSlot.GetValue(), Lookup)
-			: NewGrid.AddItem(ItemId, *Item, 1) == 0);
+		const int32 SlotIndex = GetSlotIndex(Slot);
+		const float Durability = GetDurability(Wear, SlotIndex);
+		bool bPlaced = false;
+		if (Item && TargetSlot.IsSet())
+		{
+			bPlaced = NewGrid.AddEntryAt(ItemId, 1, TargetSlot.GetValue(), Lookup);
+			if (FRubezhInventoryEntry* Placed = bPlaced ? NewGrid.GetEntryMutable(NewGrid.FindEntryAt(TargetSlot.GetValue())) : nullptr)
+			{
+				Placed->Durability = Durability;
+			}
+		}
+		else if (Item)
+		{
+			bPlaced = NewGrid.AddEntry(MakeGearEntry(ItemId, Durability), *Item) == 0;
+		}
 		if (!bPlaced)
 		{
 			return EResult::NoRoom;
@@ -258,6 +320,11 @@ namespace Rubezh::Equipment
 
 		Grid = MoveTemp(NewGrid);
 		Equipped = MoveTemp(NewEquipped);
+		if (Wear)
+		{
+			*Wear = NormalizedWear(Wear);
+			(*Wear)[SlotIndex] = MaxGearDurability;
+		}
 		return EResult::Ok;
 	}
 

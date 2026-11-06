@@ -2,6 +2,7 @@
 
 #include "Items/RubezhItemCatalog.h"
 
+#include "Animals/RubezhAnimalRules.h"
 #include "Engine/DataTable.h"
 #include "Items/RubezhItemDefinition.h"
 #include "Items/RubezhWeaponDefinition.h"
@@ -20,6 +21,12 @@ namespace Rubezh::Items
 	{
 		const UDataTable* Table = GetDefault<URubezhSettings>()->WeaponTable.LoadSynchronous();
 		return (Table && !ItemId.IsNone()) ? Table->FindRow<FRubezhWeaponDefinition>(ItemId, TEXT("RubezhItemCatalog"), false) : nullptr;
+	}
+
+	const FRubezhAnimalDefinition* FindAnimal(FName AnimalId)
+	{
+		const UDataTable* Table = GetDefault<URubezhSettings>()->AnimalTable.LoadSynchronous();
+		return (Table && !AnimalId.IsNone()) ? Table->FindRow<FRubezhAnimalDefinition>(AnimalId, TEXT("RubezhItemCatalog"), false) : nullptr;
 	}
 
 	TArray<FName> GetItemIds()

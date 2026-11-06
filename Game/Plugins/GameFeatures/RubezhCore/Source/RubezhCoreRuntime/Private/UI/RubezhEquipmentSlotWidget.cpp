@@ -84,18 +84,22 @@ void URubezhEquipmentSlotWidget::SetWeapon(const FRubezhInventoryEntry& Entry, c
 		: FString::Printf(TEXT("%s: пусто. Перетащите сюда оружие или дважды кликните его в рюкзаке"), Rubezh::Weapons::GetSlotName(WeaponSlot))));
 }
 
-void URubezhEquipmentSlotWidget::SetItem(FName InItemId, const FRubezhItemDefinition* Item)
+void URubezhEquipmentSlotWidget::SetItem(FName InItemId, const FRubezhItemDefinition* Item, float Durability)
 {
 	using namespace Rubezh::InventoryStyle;
 
 	ItemId = Item ? InItemId : NAME_None;
 	Definition = Item ? *Item : FRubezhItemDefinition();
-	ItemText->SetText(Item ? Item->DisplayName : FText::FromString(TEXT("—")));
+	const bool bShowsWear = Item && Rubezh::Equipment::CanWear(*Item);
+	ItemText->SetText(!Item ? FText::FromString(TEXT("—"))
+		: bShowsWear ? FText::FromString(FString::Printf(TEXT("%s · %.0f %%"), *Item->DisplayName.ToString(), Durability))
+		: Item->DisplayName);
 	ResetHighlight();
 
+	const FString Wear = bShowsWear ? FString::Printf(TEXT("\nПрочность: %.0f %%, защита падает вместе с ней"), Durability) : FString();
 	const FString Tooltip = Item
-		? FString::Printf(TEXT("%s\n%s\n%.2f кг\nПеретащить в рюкзак или двойной клик — снять, за окно — бросить%s"),
-			*Item->DisplayName.ToString(), *Rubezh::Equipment::DescribeStats(*Item), Item->WeightKg,
+		? FString::Printf(TEXT("%s\n%s%s\n%.2f кг\nПеретащить в рюкзак или двойной клик — снять, за окно — бросить%s"),
+			*Item->DisplayName.ToString(), *Rubezh::Equipment::DescribeStats(*Item), *Wear, Item->WeightKg,
 			EquipSlot == ERubezhEquipSlot::Backpack ? TEXT(" (вместе с вещами)") : TEXT(""))
 		: FString::Printf(TEXT("%s: пусто. Перетащите сюда предмет или дважды кликните его в рюкзаке"), Rubezh::Equipment::GetSlotName(EquipSlot));
 	SetToolTipText(FText::FromString(Tooltip));

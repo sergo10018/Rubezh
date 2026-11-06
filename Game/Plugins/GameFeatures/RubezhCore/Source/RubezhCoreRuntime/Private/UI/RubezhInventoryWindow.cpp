@@ -322,7 +322,7 @@ void URubezhInventoryWindow::RefreshEquipment(const URubezhInventoryComponent& I
 	for (URubezhEquipmentSlotWidget* SlotWidget : EquipSlots)
 	{
 		const FName ItemId = Inventory.GetEquipped(SlotWidget->GetEquipSlot());
-		SlotWidget->SetItem(ItemId, ItemId.IsNone() ? nullptr : Inventory.FindDefinition(ItemId));
+		SlotWidget->SetItem(ItemId, ItemId.IsNone() ? nullptr : Inventory.FindDefinition(ItemId), Inventory.GetEquippedDurability(SlotWidget->GetEquipSlot()));
 		SlotWidget->SetRenderOpacity(1.0f);
 	}
 

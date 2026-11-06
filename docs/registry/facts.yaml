@@ -267,3 +267,22 @@ items:
       - Game/Plugins/GameFeatures/RubezhCore/Source/RubezhCoreRuntime/Public/RubezhSettings.h
     note: "Карманы 4 — значение PocketSlots в RubezhSettings.h, а не строка items.csv. «Карманный слот», которого нет по решению в 00_Core_loop.md, — другое понятие: сохранение вещей при смерти."
     added: 2026-11-05
+
+  - name: Износ брони
+    value: "0,2 % прочности за единицу урона до брони; защита пропорциональна прочности; ремонт у бронника, 30 % цены за полный"
+    status: active
+    source: Game/Plugins/GameFeatures/RubezhCore/Source/RubezhCoreRuntime/Public/Items/RubezhEquipment.h
+    referenced_by:
+      - docs/gdd/01_Системы_прототипа.md#4
+      - CLAUDE.md
+    added: 2026-11-06
+
+  - name: Животные прототипа
+    value: "собака, волк, кабан, медведь; стая бежит при потере половины"
+    status: active
+    source: data/animals.csv
+    referenced_by:
+      - docs/gdd/01_Системы_прототипа.md#4
+      - docs/01_Канон.md#3
+      - CLAUDE.md
+    added: 2026-11-06

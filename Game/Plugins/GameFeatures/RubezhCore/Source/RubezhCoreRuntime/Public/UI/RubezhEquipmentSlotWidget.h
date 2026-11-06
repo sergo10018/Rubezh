@@ -34,7 +34,7 @@ public:
 	int32 GetWeaponSlot() const { return WeaponSlot; }
 
 	/** Показать надетое (Item == nullptr — слот пуст). */
-	void SetItem(FName InItemId, const FRubezhItemDefinition* Item);
+	void SetItem(FName InItemId, const FRubezhItemDefinition* Item, float Durability = 100.0f);
 
 	ERubezhEquipSlot GetEquipSlot() const { return EquipSlot; }
 

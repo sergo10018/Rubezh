@@ -244,10 +244,15 @@ void URubezhInjuryComponent::HandleHealthChanged(AActor* Instigator, AActor* Cau
 		{
 			Hit.bLegHit = IsLegBone(HitResult->BoneName);
 		}
-		if (const URubezhInventoryComponent* Inventory = URubezhInventoryComponent::FindForActor(GetPawn<APawn>()))
+		if (URubezhInventoryComponent* Inventory = URubezhInventoryComponent::FindForActor(GetPawn<APawn>()))
 		{
 			const ERubezhBodyZone Zone = HitResult ? Rubezh::Equipment::GetZoneForBone(HitResult->BoneName) : ERubezhBodyZone::Torso;
 			Hit.BleedChanceMultiplier = Inventory->GetProtection(Zone).BleedChanceMultiplier;
+			// Падение и прочий урон без попадания броню не изнашивают.
+			if (HitResult)
+			{
+				Inventory->ApplyHitWear(Zone, Hit.Damage);
+			}
 		}
 	}
 	AddInjuries(RollHitInjuries(Hit, Random));

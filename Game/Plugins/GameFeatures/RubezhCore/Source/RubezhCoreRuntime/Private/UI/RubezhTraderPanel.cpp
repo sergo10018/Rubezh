@@ -12,6 +12,7 @@
 #include "Components/TextBlock.h"
 #include "Components/VerticalBox.h"
 #include "Components/VerticalBoxSlot.h"
+#include "Items/RubezhEquipment.h"
 #include "Items/RubezhInventoryComponent.h"
 #include "Items/RubezhItemCatalog.h"
 #include "Items/RubezhTradeRules.h"
@@ -40,7 +41,7 @@ namespace
 		return Block;
 	}
 
-	FString DescribeWeapon(const FRubezhItemDefinition& Item, const FRubezhInventoryEntry& Entry)
+	FString DescribeWorn(const FRubezhItemDefinition& Item, const FRubezhInventoryEntry& Entry)
 	{
 		return FString::Printf(TEXT("%s (%.0f %%)"), *Item.DisplayName.ToString(), Entry.Durability);
 	}
@@ -135,9 +136,9 @@ void URubezhTraderPanel::Refresh(URubezhInventoryComponent& Inventory)
 	Rows->ClearChildren();
 	AddBuyRows(Inventory, Kind);
 	AddSellRows(Inventory, Kind);
-	if (Kind == ERubezhTraderKind::Gunsmith)
+	if (Kind == ERubezhTraderKind::Gunsmith || Kind == ERubezhTraderKind::Armorer)
 	{
-		AddRepairRows(Inventory);
+		AddRepairRows(Inventory, Kind);
 	}
 }
 
@@ -210,7 +211,7 @@ void URubezhTraderPanel::AddSellRows(URubezhInventoryComponent& Inventory, ERube
 			bHasHeader = true;
 		}
 
-		const FString Name = Rubezh::Items::FindWeapon(Entry.ItemId) ? DescribeWeapon(*Item, Entry)
+		const FString Name = (Rubezh::Items::FindWeapon(Entry.ItemId) || Rubezh::Equipment::CanWear(*Item)) ? DescribeWorn(*Item, Entry)
 			: Entry.Count > 1 ? FString::Printf(TEXT("%s ×%d"), *Item->DisplayName.ToString(), Entry.Count)
 			: Item->DisplayName.ToString();
 		const FString Label = FString::Printf(TEXT("%s — %s"), *Name, *Rubezh::Trade::FormatMoney(Rubezh::Trade::GetSellValue(Entry, *Item, Items, Weapons)));
@@ -221,24 +222,25 @@ void URubezhTraderPanel::AddSellRows(URubezhInventoryComponent& Inventory, ERube
 	}
 }
 
-void URubezhTraderPanel::AddRepairRows(URubezhInventoryComponent& Inventory)
+void URubezhTraderPanel::AddRepairRows(URubezhInventoryComponent& Inventory, ERubezhTraderKind Kind)
 {
 	bool bHasHeader = false;
 	auto AddRepairRow = [&](const FRubezhInventoryEntry& Entry, TFunction<void()> Request)
 	{
 		const FRubezhItemDefinition* Item = Inventory.FindDefinition(Entry.ItemId);
-		const int32 Cost = (Item && Rubezh::Items::FindWeapon(Entry.ItemId)) ? Rubezh::Trade::GetRepairCost(Entry, *Item) : 0;
+		const bool bRepairable = Item && (Kind == ERubezhTraderKind::Gunsmith ? Rubezh::Items::FindWeapon(Entry.ItemId) != nullptr : Rubezh::Equipment::CanWear(*Item));
+		const int32 Cost = bRepairable ? Rubezh::Trade::GetRepairCost(Entry, *Item) : 0;
 		if (Cost <= 0)
 		{
 			return;
 		}
 		if (!bHasHeader)
 		{
-			AddHeader(TEXT("Ремонт оружия"));
+			AddHeader(Kind == ERubezhTraderKind::Gunsmith ? TEXT("Ремонт оружия") : TEXT("Ремонт снаряжения"));
 			bHasHeader = true;
 		}
 
-		const FString Label = FString::Printf(TEXT("%s — %s"), *DescribeWeapon(*Item, Entry), *Rubezh::Trade::FormatMoney(Cost));
+		const FString Label = FString::Printf(TEXT("%s — %s"), *DescribeWorn(*Item, Entry), *Rubezh::Trade::FormatMoney(Cost));
 		const int32 Money = Inventory.GetMoney();
 		AddRow(Label, TEXT("Починить"), [this, Cost, Money, Request = MoveTemp(Request)]
 		{
@@ -252,12 +254,29 @@ void URubezhTraderPanel::AddRepairRows(URubezhInventoryComponent& Inventory)
 	};
 
 	URubezhInventoryComponent* InventoryPtr = &Inventory;
-	const Rubezh::Weapons::FWeaponSlots& Slots = Inventory.GetWeaponSlots();
-	for (int32 WeaponSlot = 0; WeaponSlot < Slots.Num(); ++WeaponSlot)
+	if (Kind == ERubezhTraderKind::Gunsmith)
 	{
-		if (!Slots[WeaponSlot].ItemId.IsNone())
+		const Rubezh::Weapons::FWeaponSlots& Slots = Inventory.GetWeaponSlots();
+		for (int32 WeaponSlot = 0; WeaponSlot < Slots.Num(); ++WeaponSlot)
 		{
-			AddRepairRow(Slots[WeaponSlot], [InventoryPtr, WeaponSlot] { InventoryPtr->ServerRepairWeapon(WeaponSlot); });
+			if (!Slots[WeaponSlot].ItemId.IsNone())
+			{
+				AddRepairRow(Slots[WeaponSlot], [InventoryPtr, WeaponSlot] { InventoryPtr->ServerRepairWeapon(WeaponSlot); });
+			}
+		}
+	}
+	else
+	{
+		for (const ERubezhEquipSlot EquipSlot : Rubezh::Equipment::AllSlots)
+		{
+			FRubezhInventoryEntry Worn;
+			Worn.ItemId = Inventory.GetEquipped(EquipSlot);
+			Worn.Count = 1;
+			Worn.Durability = Inventory.GetEquippedDurability(EquipSlot);
+			if (!Worn.ItemId.IsNone())
+			{
+				AddRepairRow(Worn, [InventoryPtr, EquipSlot] { InventoryPtr->ServerRepairEquipped(EquipSlot); });
+			}
 		}
 	}
 

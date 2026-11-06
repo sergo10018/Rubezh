@@ -77,6 +77,10 @@ public:
 	UFUNCTION(Server, Reliable)
 	void ServerDropEquipped(ERubezhEquipSlot Slot);
 
+	/** Починить надетое у бронника. */
+	UFUNCTION(Server, Reliable)
+	void ServerRepairEquipped(ERubezhEquipSlot Slot);
+
 	// --- Оружие (RubezhInventoryComponent_Weapons.cpp) ---
 
 	/** Взять оружие из рюкзака в слот (INDEX_NONE — подходящий сам). */
@@ -214,8 +218,17 @@ public:
 	FName GetEquipped(ERubezhEquipSlot Slot) const;
 	const Rubezh::Equipment::FEquipped& GetEquippedItems() const { return Equipped; }
 
-	/** Защита надетого для части тела. */
+	/** Защита надетого для части тела с учётом износа. */
 	Rubezh::Equipment::FProtection GetProtection(ERubezhBodyZone Zone) const;
+
+	/** Прочность надетого в слоте, проценты. */
+	float GetEquippedDurability(ERubezhEquipSlot Slot) const;
+
+	/** Только сервер: попадание изнашивает всё, что закрывает часть тела. DamageTaken — урон после брони. */
+	void ApplyHitWear(ERubezhBodyZone Zone, float DamageTaken);
+
+	/** Только сервер (для проверки): задать прочность надетого. */
+	void SetEquippedDurability(ERubezhEquipSlot Slot, float Durability);
 
 	/** Ячеек без рюкзака (из настроек). */
 	static int32 GetPocketSlots();
@@ -288,8 +301,8 @@ private:
 	bool CanReachTrader(const ARubezhTrader& Trader) const;
 	/** Открытый торговец, если он есть и ещё в досягаемости. */
 	const ARubezhTrader* GetReachableTrader() const;
-	bool CanRepairHere() const;
-	void RepairWeaponEntry(FRubezhInventoryEntry& Entry);
+	bool CanRepairHere(FName ItemId) const;
+	void RepairEntry(FRubezhInventoryEntry& Entry);
 	void LogTrade(const TCHAR* Action, FName ItemId, Rubezh::Trade::EResult Result) const;
 
 	// Оружие (RubezhInventoryComponent_Weapons.cpp).
@@ -335,6 +348,10 @@ private:
 	// Надетое по слотам (порядок — Rubezh::Equipment::AllSlots).
 	UPROPERTY(ReplicatedUsing = OnRep_Grid)
 	TArray<FName> Equipped;
+
+	// Прочность надетого, проценты; индексы как у Equipped.
+	UPROPERTY(ReplicatedUsing = OnRep_Grid)
+	TArray<float> EquippedDurability;
 
 	// Оружие в слотах. Числа на экземплярах Lyra (патроны для стрельбы и счётчика) — лишь их копия.
 	UPROPERTY(ReplicatedUsing = OnRep_Grid)

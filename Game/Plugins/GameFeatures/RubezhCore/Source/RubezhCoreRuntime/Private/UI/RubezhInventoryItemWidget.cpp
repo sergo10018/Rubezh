@@ -80,7 +80,7 @@ void URubezhInventoryItemWidget::Setup(URubezhInventoryWindow* InWindow, ERubezh
 	{
 		CountText->SetText(FText::FromString(FString::Printf(TEXT("%d/%d"), Entry.Rounds, Definition.MagazineCapacity)));
 	}
-	else if (Rubezh::Items::FindWeapon(Entry.ItemId))
+	else if (Rubezh::Items::FindWeapon(Entry.ItemId) || Rubezh::Equipment::CanWear(Definition))
 	{
 		CountText->SetText(FText::FromString(FString::Printf(TEXT("%.0f %%"), Entry.Durability)));
 	}
@@ -135,6 +135,10 @@ FText URubezhInventoryItemWidget::BuildTooltip() const
 	else if (Rubezh::Items::FindWeapon(Entry.ItemId))
 	{
 		State = FString::Printf(TEXT("Прочность: %.0f %%, заряжено: %d\n"), Entry.Durability, Entry.Rounds);
+	}
+	else if (Rubezh::Equipment::CanWear(Definition))
+	{
+		State = FString::Printf(TEXT("Прочность: %.0f %%\n"), Entry.Durability);
 	}
 
 	return FText::FromString(FString::Printf(TEXT("%s\n%s%s%d шт. × %.3g кг = %.2f кг\n%s"),

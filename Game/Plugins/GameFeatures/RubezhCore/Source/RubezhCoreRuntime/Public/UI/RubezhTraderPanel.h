@@ -50,7 +50,7 @@ private:
 	void AddHeader(const FString& Text);
 	void AddBuyRows(URubezhInventoryComponent& Inventory, ERubezhTraderKind Kind);
 	void AddSellRows(URubezhInventoryComponent& Inventory, ERubezhTraderKind Kind);
-	void AddRepairRows(URubezhInventoryComponent& Inventory);
+	void AddRepairRows(URubezhInventoryComponent& Inventory, ERubezhTraderKind Kind);
 	void AddRow(const FString& Label, const FString& PrimaryLabel, TFunction<void()> Primary, const FString& SecondaryLabel = FString(), TFunction<void()> Secondary = nullptr);
 
 	void RequestBuy(URubezhInventoryComponent& Inventory, FName ItemId, int32 Count, ERubezhTraderKind Kind);

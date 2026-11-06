@@ -29,6 +29,7 @@ public class RubezhCoreRuntime : ModuleRules
 				"CoreUObject",
 				"Engine",
 				"GameplayTags",
+				"AIModule",
 				"GameplayTasks",
 				"EnhancedInput",
 				"NetCore",

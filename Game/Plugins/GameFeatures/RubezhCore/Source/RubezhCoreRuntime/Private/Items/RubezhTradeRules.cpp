@@ -2,6 +2,8 @@
 
 #include "Items/RubezhTradeRules.h"
 
+#include "Items/RubezhEquipment.h"
+
 namespace Rubezh::Trade
 {
 	namespace
@@ -79,8 +81,8 @@ namespace Rubezh::Trade
 			return 0;
 		}
 
-		// Износ снижает цену только самого оружия: магазин и патроны внутри него не изнашиваются.
-		const double Condition = WeaponStats(Entry.ItemId) ? FMath::Clamp(Entry.Durability, 0.0f, Weapons::MaxDurability) / Weapons::MaxDurability : 1.0;
+		// Износ снижает цену только самого оружия или брони: магазин и патроны внутри оружия не изнашиваются.
+		const double Condition = (WeaponStats(Entry.ItemId) || Equipment::CanWear(Item)) ? FMath::Clamp(Entry.Durability, 0.0f, Weapons::MaxDurability) / Weapons::MaxDurability : 1.0;
 		const double FullPrice = static_cast<double>(Item.Price) * Entry.Count * Condition + GetLoadedValueBeforeRounding(Entry, Item, Items, WeaponStats);
 
 		// Вниз, чтобы продажа не оказалась выгоднее покупки; но хоть что-то за предмет дают всегда.

@@ -1,6 +1,9 @@
 // РУБЕЖ: Земля после разлома
 // Отладочные консольные команды для плейтеста. В сборку Shipping не попадают.
 
+#include "Animals/RubezhAnimal.h"
+#include "Animals/RubezhAnimalSpawner.h"
+#include "EngineUtils.h"
 #include "Engine/World.h"
 #include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerController.h"
@@ -164,16 +167,102 @@ namespace
 			Result == Rubezh::Equipment::EResult::Ok ? TEXT("надето") : Rubezh::Equipment::Describe(Result));
 	}
 
-	void UnequipItem(const TArray<FString>& Args, UWorld* World)
+	/** Выпустить животных в 15 м перед игроком. */
+	void SpawnAnimals(const TArray<FString>& Args, UWorld* World)
 	{
-		URubezhInventoryComponent* Inventory = (World && World->GetNetMode() != NM_Client) ? FindLocalInventory(World) : nullptr;
-		const FString Name = Args.Num() > 0 ? Args[0].ToLower() : FString();
-		const ERubezhEquipSlot Slot =
-			Name == TEXT("head") ? ERubezhEquipSlot::Head :
+		const APawn* Pawn = FindLocalPawnOnServer(World);
+		if (!Pawn || Args.Num() < 1)
+		{
+			UE_LOG(LogRubezh, Display, TEXT("Rubezh.Animal dog|wolf|boar|bear [сколько] — выпустить животных перед собой (только на сервере)"));
+			return;
+		}
+		const int32 Count = Args.Num() > 1 ? FCString::Atoi(*Args[1]) : 1;
+		ARubezhAnimalSpawner::SpawnAt(*World, Pawn->GetActorLocation() + Pawn->GetActorForwardVector() * 1500.0f, FName(*Args[0]), Count);
+	}
+
+	/** Попадание по ближайшему зверю от имени игрока, через расчёт урона Lyra: проверить здоровье, гибель и бегство стаи. */
+	void HitNearestAnimal(const TArray<FString>& Args, UWorld* World)
+	{
+		APawn* Pawn = FindLocalPawnOnServer(World);
+		UAbilitySystemComponent* Source = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Pawn);
+		const TSubclassOf<UGameplayEffect> DamageEffect = LoadClass<UGameplayEffect>(nullptr,
+			TEXT("/Game/GameplayEffects/Damage/GE_Damage_Basic_SetByCaller.GE_Damage_Basic_SetByCaller_C"));
+		ARubezhAnimal* Nearest = nullptr;
+		for (TActorIterator<ARubezhAnimal> It(World); It && Pawn; ++It)
+		{
+			if (It->IsAlive() && (!Nearest || It->GetDistanceTo(Pawn) < Nearest->GetDistanceTo(Pawn)))
+			{
+				Nearest = *It;
+			}
+		}
+		if (!Source || !DamageEffect || !Nearest || Args.Num() < 1)
+		{
+			UE_LOG(LogRubezh, Display, TEXT("Rubezh.HitAnimal <урон> — попасть по ближайшему зверю"));
+			return;
+		}
+
+		FGameplayEffectContextHandle Context = Source->MakeEffectContext();
+		FHitResult Hit;
+		Hit.HitObjectHandle = FActorInstanceHandle(Nearest);
+		Hit.ImpactPoint = Nearest->GetActorLocation();
+		Hit.Location = Hit.ImpactPoint;
+		Context.AddHitResult(Hit, true);
+		const FGameplayEffectSpecHandle Spec = Source->MakeOutgoingSpec(DamageEffect, 1.0f, Context);
+		Spec.Data->SetSetByCallerMagnitude(FGameplayTag::RequestGameplayTag(TEXT("SetByCaller.Damage")), FCString::Atof(*Args[0]));
+		const float Before = Nearest->GetHealthFraction();
+		Source->ApplyGameplayEffectSpecToTarget(*Spec.Data, Nearest->GetAbilitySystemComponent());
+		UE_LOG(LogRubezh, Display, TEXT("Rubezh.HitAnimal: %s, здоровье %.0f %% → %.0f %%, состояние %s"),
+			*Nearest->GetAnimalId().ToString(), Before * 100.0f, Nearest->GetHealthFraction() * 100.0f, *UEnum::GetValueAsString(Nearest->GetState()));
+	}
+
+	/** Что сейчас делают звери: вид, состояние, расстояние до игрока. */
+	void ListAnimals(const TArray<FString>& Args, UWorld* World)
+	{
+		const APawn* Pawn = FindLocalPawnOnServer(World);
+		for (TActorIterator<ARubezhAnimal> It(World); It && Pawn; ++It)
+		{
+			UE_LOG(LogRubezh, Display, TEXT("%s %s: %s, %.0f м, здоровье %.0f %%"), *It->GetName(), *It->GetAnimalId().ToString(),
+				*UEnum::GetValueAsString(It->GetState()), It->GetDistanceTo(Pawn) * 0.01f, It->GetHealthFraction() * 100.0f);
+		}
+	}
+
+	ERubezhEquipSlot ParseEquipSlot(const FString& Name)
+	{
+		return Name == TEXT("head") ? ERubezhEquipSlot::Head :
 			Name == TEXT("armor") ? ERubezhEquipSlot::Armor :
 			Name == TEXT("top") ? ERubezhEquipSlot::Top :
 			Name == TEXT("bottom") ? ERubezhEquipSlot::Bottom :
 			Name == TEXT("backpack") ? ERubezhEquipSlot::Backpack : ERubezhEquipSlot::None;
+	}
+
+	/** Задать прочность надетого — проверить, что защита падает вместе с ней. */
+	void WearGear(const TArray<FString>& Args, UWorld* World)
+	{
+		URubezhInventoryComponent* Inventory = (World && World->GetNetMode() != NM_Client) ? FindLocalInventory(World) : nullptr;
+		const ERubezhEquipSlot Slot = Args.Num() > 0 ? ParseEquipSlot(Args[0].ToLower()) : ERubezhEquipSlot::None;
+		if (!Inventory || Slot == ERubezhEquipSlot::None || Args.Num() < 2)
+		{
+			UE_LOG(LogRubezh, Display, TEXT("Rubezh.GearWear head|armor|top|bottom <проценты> — прочность надетого (только на сервере)"));
+			return;
+		}
+		Inventory->SetEquippedDurability(Slot, FCString::Atof(*Args[1]));
+	}
+
+	void RepairGear(const TArray<FString>& Args, UWorld* World)
+	{
+		URubezhInventoryComponent* Inventory = FindLocalInventory(World);
+		const ERubezhEquipSlot Slot = Args.Num() > 0 ? ParseEquipSlot(Args[0].ToLower()) : ERubezhEquipSlot::None;
+		if (Inventory && Slot != ERubezhEquipSlot::None)
+		{
+			Inventory->ServerRepairEquipped(Slot);
+		}
+	}
+
+	void UnequipItem(const TArray<FString>& Args, UWorld* World)
+	{
+		URubezhInventoryComponent* Inventory = (World && World->GetNetMode() != NM_Client) ? FindLocalInventory(World) : nullptr;
+		const FString Name = Args.Num() > 0 ? Args[0].ToLower() : FString();
+		const ERubezhEquipSlot Slot = ParseEquipSlot(Name);
 		if (!Inventory || Slot == ERubezhEquipSlot::None)
 		{
 			UE_LOG(LogRubezh, Display, TEXT("Rubezh.Unequip head|armor|top|bottom|backpack — снять в рюкзак"));
@@ -234,7 +323,7 @@ namespace
 
 		for (const ERubezhEquipSlot Slot : Rubezh::Equipment::AllSlots)
 		{
-			UE_LOG(LogRubezh, Display, TEXT("  [%s] %s"), Rubezh::Equipment::GetSlotName(Slot), *Inventory->GetEquipped(Slot).ToString());
+			UE_LOG(LogRubezh, Display, TEXT("  [%s] %s, прочность %.1f"), Rubezh::Equipment::GetSlotName(Slot), *Inventory->GetEquipped(Slot).ToString(), Inventory->GetEquippedDurability(Slot));
 		}
 		const Rubezh::Weapons::FWeaponSlots& Weapons = Inventory->GetWeaponSlots();
 		for (int32 Index = 0; Index < Weapons.Num(); ++Index)
@@ -544,6 +633,26 @@ namespace
 	FAutoConsoleCommandWithWorldAndArgs RepairCommand(
 		TEXT("Rubezh.Repair"), TEXT("Починить у оружейника оружие в слоте: <слот 0-2>"),
 		FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&RepairSlot));
+
+	FAutoConsoleCommandWithWorldAndArgs AnimalCommand(
+		TEXT("Rubezh.Animal"), TEXT("Выпустить животных перед собой: dog|wolf|boar|bear [сколько]"),
+		FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&SpawnAnimals));
+
+	FAutoConsoleCommandWithWorldAndArgs HitAnimalCommand(
+		TEXT("Rubezh.HitAnimal"), TEXT("Попасть по ближайшему зверю: <урон>"),
+		FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&HitNearestAnimal));
+
+	FAutoConsoleCommandWithWorldAndArgs AnimalsCommand(
+		TEXT("Rubezh.Animals"), TEXT("Показать зверей: состояние и расстояние"),
+		FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&ListAnimals));
+
+	FAutoConsoleCommandWithWorldAndArgs GearWearCommand(
+		TEXT("Rubezh.GearWear"), TEXT("Прочность надетого: head|armor|top|bottom <проценты>"),
+		FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&WearGear));
+
+	FAutoConsoleCommandWithWorldAndArgs RepairGearCommand(
+		TEXT("Rubezh.RepairGear"), TEXT("Починить у бронника надетое: head|armor|top|bottom"),
+		FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&RepairGear));
 
 	FAutoConsoleCommandWithWorldAndArgs UseCommand(
 		TEXT("Rubezh.Use"), TEXT("Применить предмет из рюкзака: Rubezh.Use <ItemId>"),

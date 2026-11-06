@@ -59,6 +59,7 @@ void URubezhInventoryComponent::GetLifetimeReplicatedProps(TArray<FLifetimePrope
 	// Содержимое чужого рюкзака — тайна: видит только владелец. Тело обыскивают через ARubezhLootContainer.
 	DOREPLIFETIME_CONDITION(URubezhInventoryComponent, Grid, COND_OwnerOnly);
 	DOREPLIFETIME_CONDITION(URubezhInventoryComponent, Equipped, COND_OwnerOnly);
+	DOREPLIFETIME_CONDITION(URubezhInventoryComponent, EquippedDurability, COND_OwnerOnly);
 	DOREPLIFETIME_CONDITION(URubezhInventoryComponent, WeaponSlots, COND_OwnerOnly);
 	DOREPLIFETIME_CONDITION(URubezhInventoryComponent, LootContainer, COND_OwnerOnly);
 	DOREPLIFETIME_CONDITION(URubezhInventoryComponent, LootGrid, COND_OwnerOnly);
@@ -82,6 +83,7 @@ void URubezhInventoryComponent::BeginPlay()
 	if (GetOwner()->HasAuthority())
 	{
 		Equipped.SetNum(Rubezh::Equipment::SlotCount);
+		EquippedDurability.Init(Rubezh::Equipment::MaxGearDurability, Rubezh::Equipment::SlotCount);
 		Grid = FRubezhInventoryGrid(Settings->PocketSlots);
 		WeaponSlots.SetNum(Rubezh::Weapons::SlotCount);
 		WeaponInstances.SetNum(Rubezh::Weapons::SlotCount);
@@ -225,7 +227,36 @@ FName URubezhInventoryComponent::GetEquipped(ERubezhEquipSlot Slot) const
 
 Rubezh::Equipment::FProtection URubezhInventoryComponent::GetProtection(ERubezhBodyZone Zone) const
 {
-	return Rubezh::Equipment::GetProtection(Equipped, Zone, [this](FName Id) { return FindDefinition(Id); });
+	return Rubezh::Equipment::GetProtection(Equipped, Zone, [this](FName Id) { return FindDefinition(Id); }, &EquippedDurability);
+}
+
+float URubezhInventoryComponent::GetEquippedDurability(ERubezhEquipSlot Slot) const
+{
+	const int32 Index = Rubezh::Equipment::GetSlotIndex(Slot);
+	return EquippedDurability.IsValidIndex(Index) ? EquippedDurability[Index] : Rubezh::Equipment::MaxGearDurability;
+}
+
+void URubezhInventoryComponent::SetEquippedDurability(ERubezhEquipSlot Slot, float Durability)
+{
+	const int32 Index = Rubezh::Equipment::GetSlotIndex(Slot);
+	if (GetOwner()->HasAuthority() && EquippedDurability.IsValidIndex(Index))
+	{
+		EquippedDurability[Index] = FMath::Clamp(Durability, 0.0f, Rubezh::Equipment::MaxGearDurability);
+		OnInventoryChanged.Broadcast();
+	}
+}
+
+void URubezhInventoryComponent::ApplyHitWear(ERubezhBodyZone Zone, float DamageTaken)
+{
+	if (!GetOwner()->HasAuthority())
+	{
+		return;
+	}
+	// Изнашивает сила самого попадания, а не то, что прошло сквозь броню: иначе хорошая броня не изнашивалась бы вовсе.
+	const float Multiplier = GetProtection(Zone).DamageMultiplier;
+	const float RawDamage = Multiplier > UE_KINDA_SMALL_NUMBER ? DamageTaken / Multiplier : DamageTaken;
+	Rubezh::Equipment::ApplyHitWear(Equipped, EquippedDurability, Zone, RawDamage, [this](FName Id) { return FindDefinition(Id); });
+	OnInventoryChanged.Broadcast();
 }
 
 float URubezhInventoryComponent::GetIncomingDamageMultiplier(const UAbilitySystemComponent* Target, const FHitResult* Hit)
@@ -260,7 +291,7 @@ void URubezhInventoryComponent::LogEquipFailure(Rubezh::Equipment::EResult Resul
 
 void URubezhInventoryComponent::ServerEquipEntry_Implementation(int32 EntryIndex)
 {
-	const Rubezh::Equipment::EResult Result = Rubezh::Equipment::Equip(Grid, Equipped, EntryIndex, [this](FName Id) { return FindDefinition(Id); }, GetPocketSlots());
+	const Rubezh::Equipment::EResult Result = Rubezh::Equipment::Equip(Grid, Equipped, EntryIndex, [this](FName Id) { return FindDefinition(Id); }, GetPocketSlots(), &EquippedDurability);
 	LogEquipFailure(Result);
 	if (Result == Rubezh::Equipment::EResult::Ok)
 	{
@@ -271,7 +302,7 @@ void URubezhInventoryComponent::ServerEquipEntry_Implementation(int32 EntryIndex
 void URubezhInventoryComponent::ServerUnequip_Implementation(ERubezhEquipSlot Slot, int32 TargetSlot)
 {
 	const TOptional<int32> Target = TargetSlot == INDEX_NONE ? TOptional<int32>() : TOptional<int32>(TargetSlot);
-	const Rubezh::Equipment::EResult Result = Rubezh::Equipment::Unequip(Grid, Equipped, Slot, Target, [this](FName Id) { return FindDefinition(Id); }, GetPocketSlots());
+	const Rubezh::Equipment::EResult Result = Rubezh::Equipment::Unequip(Grid, Equipped, Slot, Target, [this](FName Id) { return FindDefinition(Id); }, GetPocketSlots(), &EquippedDurability);
 	LogEquipFailure(Result);
 	if (Result == Rubezh::Equipment::EResult::Ok)
 	{
@@ -315,13 +346,18 @@ void URubezhInventoryComponent::ServerDropEquipped_Implementation(ERubezhEquipSl
 	FName ItemId;
 	const Rubezh::Equipment::EResult Result = Rubezh::Equipment::TakeOff(NewGrid, NewEquipped, Slot, [this](FName Id) { return FindDefinition(Id); }, GetPocketSlots(), ItemId);
 	LogEquipFailure(Result);
-	if (Result != Rubezh::Equipment::EResult::Ok || !ARubezhWorldItem::SpawnInFrontOf(*Pawn, ItemId, 1))
+	FRubezhInventoryEntry DroppedEntry;
+	DroppedEntry.ItemId = ItemId;
+	DroppedEntry.Count = 1;
+	DroppedEntry.Durability = GetEquippedDurability(Slot);
+	if (Result != Rubezh::Equipment::EResult::Ok || !ARubezhWorldItem::SpawnEntryInFrontOf(*Pawn, DroppedEntry))
 	{
 		return;
 	}
 
 	Grid = MoveTemp(NewGrid);
 	Equipped = MoveTemp(NewEquipped);
+	SetEquippedDurability(Slot, Rubezh::Equipment::MaxGearDurability);
 	HandleGridChanged();
 }
 

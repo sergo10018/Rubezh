@@ -38,7 +38,22 @@ namespace Rubezh::Equipment
 	/** Надетое: массив длиной SlotCount, None — слот пуст. */
 	using FEquipped = TArray<FName>;
 
-	RUBEZHCORERUNTIME_API FProtection GetProtection(const FEquipped& Equipped, ERubezhBodyZone Zone, FRubezhItemLookup Lookup);
+	/** Прочность надетого, проценты: массив длиной SlotCount, индексы как у FEquipped. */
+	using FEquippedWear = TArray<float>;
+
+	inline constexpr float MaxGearDurability = 100.0f;
+
+	/** Сколько процентов прочности теряет каждый закрывающий часть тела слой за единицу урона до брони: автомат (34) — 6,8 %. */
+	inline constexpr float WearPerDamagePoint = 0.2f;
+
+	/** Изнашивается ли предмет: то, что защищает. Рюкзаки не изнашиваются. */
+	RUBEZHCORERUNTIME_API bool CanWear(const FRubezhItemDefinition& Item);
+
+	/** Защита падает вместе с прочностью: на 50 % — половина от указанной в таблице. Wear == nullptr — всё целое. */
+	RUBEZHCORERUNTIME_API FProtection GetProtection(const FEquipped& Equipped, ERubezhBodyZone Zone, FRubezhItemLookup Lookup, const FEquippedWear* Wear = nullptr);
+
+	/** Попадание: изнашивает всё, что закрывает эту часть тела. RawDamage — урон до брони. */
+	RUBEZHCORERUNTIME_API void ApplyHitWear(const FEquipped& Equipped, FEquippedWear& Wear, ERubezhBodyZone Zone, float RawDamage, FRubezhItemLookup Lookup);
 
 	/** Сколько ячеек: в рюкзаке или, если его нет, в карманах. */
 	RUBEZHCORERUNTIME_API int32 GetSlotCount(const FEquipped& Equipped, FRubezhItemLookup Lookup, int32 PocketSlots);
@@ -62,13 +77,13 @@ namespace Rubezh::Equipment
 
 	/**
 	 * Надеть предмет из рюкзака. Что было в слоте — отправляется в рюкзак. Если меняется рюкзак, меняется число ячеек.
-	 * При неудаче Grid и Equipped не меняются.
+	 * При неудаче Grid и Equipped не меняются. Wear (если задан) переносит прочность вместе с предметом.
 	 */
-	RUBEZHCORERUNTIME_API EResult Equip(FRubezhInventoryGrid& Grid, FEquipped& Equipped, int32 EntryIndex, FRubezhItemLookup Lookup, int32 PocketSlots);
+	RUBEZHCORERUNTIME_API EResult Equip(FRubezhInventoryGrid& Grid, FEquipped& Equipped, int32 EntryIndex, FRubezhItemLookup Lookup, int32 PocketSlots, FEquippedWear* Wear = nullptr);
 
 	/** Снять в рюкзак: в ячейку TargetSlot или (не задана) куда влезет. */
 	RUBEZHCORERUNTIME_API EResult Unequip(FRubezhInventoryGrid& Grid, FEquipped& Equipped, ERubezhEquipSlot Slot,
-		TOptional<int32> TargetSlot, FRubezhItemLookup Lookup, int32 PocketSlots);
+		TOptional<int32> TargetSlot, FRubezhItemLookup Lookup, int32 PocketSlots, FEquippedWear* Wear = nullptr);
 
 	/** Снять, никуда не кладя (чтобы бросить на землю). OutItemId — что сняли. */
 	RUBEZHCORERUNTIME_API EResult TakeOff(FRubezhInventoryGrid& Grid, FEquipped& Equipped, ERubezhEquipSlot Slot,

@@ -19,6 +19,9 @@ namespace Rubezh::Items
 	/** Идентификаторы всех предметов в порядке таблицы; пусто — таблица не задана. */
 	RUBEZHCORERUNTIME_API TArray<FName> GetItemIds();
 
+	/** Вид животного из DT_Animals; nullptr — нет такого. */
+	RUBEZHCORERUNTIME_API const struct FRubezhAnimalDefinition* FindAnimal(FName AnimalId);
+
 	/** Все строки таблицы лута (DT_LootTables); пусто — таблица не задана. */
 	RUBEZHCORERUNTIME_API TArray<FRubezhLootTableRow> GetLootRows();
 }

@@ -28,6 +28,10 @@ public:
 	UPROPERTY(Config, EditAnywhere, Category = "Items", Meta = (RequiredAssetDataTags = "RowStructure=/Script/RubezhCoreRuntime.RubezhWeaponDefinition"))
 	TSoftObjectPtr<UDataTable> WeaponTable;
 
+	// Таблица животных (строки FRubezhAnimalDefinition), импортированная из data/animals.csv.
+	UPROPERTY(Config, EditAnywhere, Category = "Animals", Meta = (RequiredAssetDataTags = "RowStructure=/Script/RubezhCoreRuntime.RubezhAnimalDefinition"))
+	TSoftObjectPtr<UDataTable> AnimalTable;
+
 	// Сколько ячеек без рюкзака — карманы.
 	UPROPERTY(Config, EditAnywhere, Category = "Items", Meta = (ClampMin = 1))
 	int32 PocketSlots = 4;

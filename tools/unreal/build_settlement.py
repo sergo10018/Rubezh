@@ -4,14 +4,20 @@
 Что ставит: безопасную зону, стены с двумя КПП, четырёх торговцев и точки появления игроков.
 Числа поселения меняются здесь. Серый бокс: модели зданий и NPC появятся позже.
 """
+import os
+import sys
+
 import unreal
 
-MAP = "/RubezhCore/Maps/L_Rubezh_Proto"
+sys.path.insert(0, os.path.join(unreal.Paths.convert_relative_path_to_full(unreal.Paths.project_dir()), "..", "tools", "unreal"))
+import field_layout as layout
+
+MAP = "/RubezhCore/Maps/L_Rubezh_Field"
 TAG = "RubezhSettlement"
 FOLDER = "Settlement"
 
-# Поселение стоит у края поля, в стороне от укрытий: на точке (8000, 0), 36×36 м внутри стен.
-CENTER_X, CENTER_Y = 8000.0, 0.0
+# 36×36 м внутри стен, на ровной площадке карты (field_layout.py).
+CENTER_X, CENTER_Y = layout.SETTLEMENT_M[0] * 100.0, layout.SETTLEMENT_M[1] * 100.0
 HALF_SIZE = 1800.0
 WALL_HEIGHT = 500.0
 WALL_THICKNESS = 50.0
@@ -77,7 +83,8 @@ def solid_wall(label, along_x, offset):
         box(label, offset, 0.0, WALL_THICKNESS, HALF_SIZE * 2.0, WALL_HEIGHT)
 
 
-levels.load_level(MAP)
+if unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem).get_editor_world().get_path_name().split(".")[0] != MAP:
+    levels.load_level(MAP)
 
 for actor in actors.get_all_level_actors():
     if TAG in [str(tag) for tag in actor.tags]:
