@@ -443,6 +443,12 @@ void ARubezhAnimal::UpdateAnimation()
 	}
 	if (State == ERubezhAnimalState::Dead)
 	{
+		// У некоторых моделей нет анимации смерти: тогда зверь просто падает на бок.
+		if (!Anim)
+		{
+			GetMesh()->bPauseAnims = true;
+			GetMesh()->AddLocalRotation(FRotator(0.0f, 0.0f, 90.0f));
+		}
 		GetWorldTimerManager().ClearTimer(AnimationTimer);
 	}
 }

@@ -2,7 +2,7 @@
 
 Запуск в редакторе при открытой /RubezhCore/Maps/L_Rubezh_Field. Повторный запуск безопасен: всё с меткой RubezhField
 сначала удаляется. Поселение строит отдельно build_settlement.py. Места — field_layout.py.
-Серый бокс: постройки — коробки; деревья и кусты берутся из TREE_MESHES и BUSH_MESHES, пока это фигуры движка.
+Модели — с Fab (TREE_MESHES, BUSH_MESHES, *_MESH); пустой список деревьев или кустов — вместо них простые фигуры.
 """
 import math
 import os
@@ -29,14 +29,26 @@ ROAD_PIECE = 2000.0
 WALL = 40.0
 
 # Заменить на модели с Fab: пути к StaticMesh. Пусто — ствол и конус из фигур движка.
-TREE_MESHES = []
-BUSH_MESHES = []
+TREE_MESHES = ["/Game/FC_BirchTreeSample/Lowland_TreeModels/BirchTree_0%d/SM_BirchTree_0%d" % (n, n) for n in range(1, 9)] + [
+    "/Game/DZ_Assets/DZ_Trees/Meshes/Pine/SM_Pine_1", "/Game/DZ_Assets/DZ_Trees/Meshes/Pine/SM_Pine_1",
+    "/Game/DZ_Assets/DZ_Trees/Meshes/Aspen/SM_Columnar_Aspen_1"]
+BUSH_MESHES = ["/Game/GV_FreeShrubsPack/Meshes/Shrubs/Wind/Shrub_%s/GV_Vol7_Shrub_%s_full_type1%s" % (n, n, tail) for n, tail in (("A", ""), ("B", ""), ("C", ""), ("D", ""), ("E", "_A"), ("F", "_B"))]
+
+# Постройки с Fab: /Game/Fab/... (см. import_fab_fbx.py). Минимум модели по высоте — чуть ниже нуля, поэтому они немного утоплены в землю.
+HOUSE_MESH = "/Game/Fab/AbandonedHouse/abandonhouse"
+BLOCK_MESH = "/Game/Fab/SovietBlock/Blockhaus"
+WAREHOUSE_MESH = "/Game/Fab/WarehouseBuilding/Warehouse-open"
+POLE_MESH = "/Game/Factory_Pack_V1/Meshes/SM_Power_Pole"
+TANK_MESH = "/Game/Factory_Pack_V1/Meshes/SM_Tank"
+POLE_STEP_M = 190.0
+POLE_SIDE_M = 28.0
 
 FOREST_PATCHES = [  # центр в метрах, радиус, сколько деревьев
-    ((-380.0, 180.0), 110.0, 70), ((-180.0, 320.0), 120.0, 70), ((120.0, 350.0), 90.0, 40),
-    ((360.0, -80.0), 110.0, 70), ((180.0, -330.0), 120.0, 70), ((-120.0, -360.0), 90.0, 40), ((30.0, 130.0), 50.0, 20),
+    ((-380.0, 180.0), 110.0, 170), ((-180.0, 320.0), 120.0, 170), ((120.0, 350.0), 90.0, 100),
+    ((360.0, -80.0), 110.0, 170), ((180.0, -330.0), 120.0, 170), ((-120.0, -360.0), 90.0, 100), ((30.0, 130.0), 50.0, 50),
+    ((-250.0, -60.0), 70.0, 60), ((130.0, -120.0), 70.0, 60),
 ]
-BUSHES = 160
+BUSHES = 450
 
 SPAWNERS = [  # вид, сколько, метры, через сколько секунд новые
     ("dog", 4, (-120.0, 70.0), 600.0), ("dog", 3, (130.0, 110.0), 600.0), ("wolf", 3, (-330.0, 170.0), 900.0),
@@ -153,14 +165,18 @@ def build_village():
     cx, cy = layout.VILLAGE_M[0] * CM, layout.VILLAGE_M[1] * CM
     houses = [(-3000, 1800), (-3200, -1600), (-800, 3000), (2600, 2600), (3200, -600), (800, -3200)]
     for index, (dx, dy) in enumerate(houses):
-        building("Village_House_%d" % index, cx + dx, cy + dy, 900.0, 700.0, 320.0, BRICK)
+        model(HOUSE_MESH, (cx + dx, cy + dy, 15.0), "Village_House_%d" % index, 90.0 * index)
         crate("Village_Crate_%d" % index, cx + dx, cy + dy, "medical" if index == 3 else "civil", 8)
 
 
 def build_factory():
     cx, cy = layout.FACTORY_M[0] * CM, layout.FACTORY_M[1] * CM
-    building("Factory_Hall", cx, cy + 2500, 6000.0, 3000.0, 1400.0, CONCRETE, door_width=1000.0)
-    building("Factory_Office", cx - 5000, cy - 2000, 2000.0, 1200.0, 900.0, BRICK)
+    model(WAREHOUSE_MESH, (cx, cy + 2500, 30.0), "Factory_Hall", 90.0)
+    # Стены панельки в исходной модели ярко-жёлтые: серый бетон ближе к нашему миру.
+    model(BLOCK_MESH, (cx - 5000, cy - 2000, 0.0), "Factory_Office").static_mesh_component.set_material(0, CONCRETE)
+    model(BLOCK_MESH, (cx - 7500, cy + 500, 0.0), "Factory_Dorm", 90.0).static_mesh_component.set_material(0, CONCRETE)
+    for index, (dx, dy) in enumerate([(5500, 800), (6500, 800)]):
+        model(TANK_MESH, (cx + dx, cy + dy, 0.0), "Factory_Tank_%d" % index)
     building("Factory_Store", cx + 4500, cy - 2500, 2400.0, 1400.0, 700.0, RUST, door_width=600.0)
     put(cylinder, BRICK, (cx + 4500, cy + 4500, 2500.0), (600.0, 600.0, 5000.0), "Factory_Chimney", folder="Field/Buildings")
     for index, (dx, dy) in enumerate([(-1500, -3500), (800, -4000), (-3000, 300), (3000, 600), (1500, -2000)]):
@@ -169,6 +185,21 @@ def build_factory():
     crate("Factory_Crate_Hall_1", cx + 2000, cy + 3300, "military", 12)
     crate("Factory_Crate_Office", cx - 5000, cy - 2000, "medical", 8)
     crate("Factory_Crate_Store", cx + 4500, cy - 2500, "civil", 10)
+
+
+def build_power_line():
+    """Столбы вдоль дороги: издалека видно, куда идти."""
+    index = 0
+    for (ax, ay), (bx, by) in zip(layout.ROAD_POINTS_M, layout.ROAD_POINTS_M[1:]):
+        length = math.hypot(bx - ax, by - ay)
+        side_x, side_y = -(by - ay) / length * POLE_SIDE_M, (bx - ax) / length * POLE_SIDE_M
+        for step in range(int(length // POLE_STEP_M) + 1):
+            t = step * POLE_STEP_M / length
+            x, y = (ax + (bx - ax) * t + side_x) * CM, (ay + (by - ay) * t + side_y) * CM
+            z = ground_z(x, y)
+            if z is not None:
+                model(POLE_MESH, (x, y, z), "Road_Pole_%02d" % index, math.degrees(math.atan2(by - ay, bx - ax)), "Field/Road")
+                index += 1
 
 
 def is_clear(x_m, y_m, margin):
@@ -204,10 +235,26 @@ def tree(rng, index, x_m, y_m):
     crown.static_mesh_component.set_collision_enabled(unreal.CollisionEnabled.NO_COLLISION)
 
 
+def model(path, location, label, yaw=0.0, folder="Field/Buildings", scale=1.0):
+    """Модель с Fab; location — точка основания."""
+    actor = actors.spawn_actor_from_class(unreal.StaticMeshActor, unreal.Vector(*location), unreal.Rotator(0.0, 0.0, yaw))
+    actor.static_mesh_component.set_static_mesh(unreal.load_asset(path))
+    actor.set_actor_scale3d(unreal.Vector(scale, scale, scale))
+    actor.set_actor_label(label)
+    actor.set_folder_path(folder)
+    actor.tags = [TAG]
+    return actor
+
+
 def bush(rng, index, x_m, y_m):
     x, y = x_m * CM, y_m * CM
     z = ground_z(x, y)
     if z is None:
+        return
+    if BUSH_MESHES:
+        actor = model(rng.choice(BUSH_MESHES), (x, y, z), "Bush_%03d" % index, rng.uniform(0.0, 360.0), "Field/Forest", rng.uniform(0.8, 1.3))
+        actor.static_mesh_component.set_collision_enabled(unreal.CollisionEnabled.NO_COLLISION)
+        actor.static_mesh_component.set_editor_property("can_ever_affect_navigation", False)
         return
     size = rng.uniform(150.0, 300.0)
     actor = put(sphere, BUSH, (x, y, z + size * 0.3), (size, size, size * 0.7), "Bush_%03d" % index, folder="Field/Forest")
@@ -271,6 +318,7 @@ for actor in actors.get_all_level_actors():
 
 editor.get_editor_world().get_world_settings().set_editor_property("DefaultGameplayExperience", unreal.load_class(None, EXPERIENCE))
 build_road()
+build_power_line()
 build_village()
 build_factory()
 build_forest()
