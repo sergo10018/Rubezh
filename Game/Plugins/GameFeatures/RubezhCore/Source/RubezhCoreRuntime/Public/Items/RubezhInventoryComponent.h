@@ -5,6 +5,7 @@
 #include "Components/ActorComponent.h"
 #include "Items/RubezhEquipment.h"
 #include "Items/RubezhInventoryGrid.h"
+#include "Items/RubezhTradeRules.h"
 #include "Items/RubezhWeaponRules.h"
 
 #include "RubezhInventoryComponent.generated.h"
@@ -12,6 +13,7 @@
 class APawn;
 class APlayerState;
 class ARubezhLootContainer;
+class ARubezhTrader;
 class UAbilitySystemComponent;
 class UDataTable;
 class ULyraHealthComponent;
@@ -161,6 +163,48 @@ public:
 	void RefreshLootView();
 	void CloseLoot();
 
+	// --- Торговля (RubezhInventoryComponent_Trade.cpp) ---
+
+	/** Начать сделку с торговцем: сервер проверит расстояние и откроет окно. */
+	UFUNCTION(Server, Reliable)
+	void ServerOpenTrader(ARubezhTrader* Trader);
+
+	UFUNCTION(Server, Reliable)
+	void ServerCloseTrader();
+
+	/** Купить Count штук у открытого торговца. */
+	UFUNCTION(Server, Reliable)
+	void ServerBuyItem(FName ItemId, int32 Count);
+
+	/** Продать открытому торговцу стопку из ячейки рюкзака. ItemId — защита от устаревшего запроса. */
+	UFUNCTION(Server, Reliable)
+	void ServerSellEntry(int32 Cell, FName ItemId);
+
+	/** Починить у оружейника оружие из ячейки рюкзака / из слота. */
+	UFUNCTION(Server, Reliable)
+	void ServerRepairEntry(int32 Cell, FName ItemId);
+
+	UFUNCTION(Server, Reliable)
+	void ServerRepairWeapon(int32 WeaponSlot);
+
+	/** Торговец, с которым идёт сделка (nullptr — никакого). */
+	ARubezhTrader* GetTraderInUse() const { return TraderInUse; }
+
+	/** Билеты на счету. При смерти не теряются. */
+	int32 GetMoney() const { return Money; }
+
+	/** Только сервер (для проверки): задать счёт. */
+	void SetMoney(int32 NewMoney);
+
+	/** Какое оружие лежит в слоте (None — пусто). */
+	FName GetWeaponInSlot(int32 WeaponSlot) const;
+
+	/** Можно ли почистить оружие в слоте: оно есть и прочность ниже потолка чистки. */
+	bool CanCleanWeapon(int32 WeaponSlot) const;
+
+	/** Только сервер: чистка закончена. false — чистить нечего, набор не тратится. */
+	bool CleanWeapon(int32 WeaponSlot, float CleanPercent);
+
 	// --- Чтение ---
 
 	UFUNCTION(BlueprintPure, Category = "Rubezh|Inventory")
@@ -232,6 +276,22 @@ private:
 	void OpenWindowForLocalPlayer() const;
 	void DropBodyOnDeath(const APawn& Pawn);
 
+	// Торговля (RubezhInventoryComponent_Trade.cpp).
+	UFUNCTION()
+	void OnRep_TraderInUse(ARubezhTrader* PreviousTrader);
+
+	UFUNCTION()
+	void OnRep_Money();
+
+	void CloseTrader();
+	void CheckTraderReach();
+	bool CanReachTrader(const ARubezhTrader& Trader) const;
+	/** Открытый торговец, если он есть и ещё в досягаемости. */
+	const ARubezhTrader* GetReachableTrader() const;
+	bool CanRepairHere() const;
+	void RepairWeaponEntry(FRubezhInventoryEntry& Entry);
+	void LogTrade(const TCHAR* Action, FName ItemId, Rubezh::Trade::EResult Result) const;
+
 	// Оружие (RubezhInventoryComponent_Weapons.cpp).
 	void ApplyStartingWeapons();
 	void BindReloadEvent();
@@ -297,6 +357,16 @@ private:
 
 	UPROPERTY(Replicated)
 	double SearchFinishTime = 0.0;
+
+	// Билеты на счету: не вещь, не весят и при смерти не теряются. Постоянными станут с бэкендом (Этап 3).
+	UPROPERTY(ReplicatedUsing = OnRep_Money)
+	int32 Money = 0;
+
+	// С кем идёт сделка.
+	UPROPERTY(ReplicatedUsing = OnRep_TraderInUse)
+	TObjectPtr<ARubezhTrader> TraderInUse;
+
+	FTimerHandle TraderReachTimer;
 
 	UPROPERTY(Transient)
 	TObjectPtr<const UDataTable> ItemTable;

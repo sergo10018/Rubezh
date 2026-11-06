@@ -148,6 +148,9 @@ private:
 	float FallApexZ = 0.0f;
 	bool bWasFalling = false;
 	bool bAbilitiesBlocked = false;
+	// Какой слот оружия чистится (только сервер): игрок мог сменить оружие, пока идёт чистка.
+	int32 CleaningWeaponSlot = INDEX_NONE;
+	FName CleaningWeaponItem;
 	float PainSwayTime = 0.0f;
 	FRotator PainSwayOffset = FRotator::ZeroRotator;
 };

@@ -22,6 +22,12 @@ namespace Rubezh::Items
 		return (Table && !ItemId.IsNone()) ? Table->FindRow<FRubezhWeaponDefinition>(ItemId, TEXT("RubezhItemCatalog"), false) : nullptr;
 	}
 
+	TArray<FName> GetItemIds()
+	{
+		const UDataTable* Table = GetDefault<URubezhSettings>()->ItemTable.LoadSynchronous();
+		return Table ? Table->GetRowNames() : TArray<FName>();
+	}
+
 	TArray<FRubezhLootTableRow> GetLootRows()
 	{
 		TArray<FRubezhLootTableRow> Rows;

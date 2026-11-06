@@ -13,13 +13,14 @@ class UProgressBar;
 class URubezhEquipmentSlotWidget;
 class URubezhInventoryComponent;
 class URubezhSlotGridWidget;
+class URubezhTraderPanel;
 class UTextBlock;
 class UVerticalBox;
 struct FRubezhItemDefinition;
 
 /**
  * Окно рюкзака: слева снаряжение и суммарная защита, в середине ячейки рюкзака, вес и перегруз,
- * справа — что обыскиваем (ящик, тело, брошенный рюкзак), если обыск идёт.
+ * справа — что обыскиваем (ящик, тело, брошенный рюкзак), если обыск идёт, или торговец (URubezhTraderPanel), если идёт сделка.
  * Открывается на слое UI.Layer.GameMenu (курсор включается, игра не получает ввод), закрывается клавишей
  * инвентаря или Esc. Все изменения — запросы к серверу; окно перерисовывается, когда сервер прислал новое содержимое.
  * Отпущенное за окном выбрасывается на землю.
@@ -148,4 +149,10 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<URubezhSlotGridWidget> LootGrid;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UTextBlock> MoneyText;
+
+	UPROPERTY(Transient)
+	TObjectPtr<URubezhTraderPanel> TraderPanel;
 };

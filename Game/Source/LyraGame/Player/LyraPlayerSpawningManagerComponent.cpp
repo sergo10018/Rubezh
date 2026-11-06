@@ -68,6 +68,12 @@ void ULyraPlayerSpawningManagerComponent::HandleOnActorSpawned(AActor* SpawnedAc
 // to restart a player the normal way in the engine.
 //======================================================================
 
+FLyraPlayerStartFilter& ULyraPlayerSpawningManagerComponent::GetPlayerStartFilter()
+{
+	static FLyraPlayerStartFilter Filter;
+	return Filter;
+}
+
 AActor* ULyraPlayerSpawningManagerComponent::ChoosePlayerStart(AController* Player)
 {
 	if (Player)
@@ -105,6 +111,8 @@ AActor* ULyraPlayerSpawningManagerComponent::ChoosePlayerStart(AController* Play
 				return nullptr;
 			}
 		}
+
+		GetPlayerStartFilter().ExecuteIfBound(Player, StarterPoints);
 
 		AActor* PlayerStart = OnChoosePlayerStart(Player, StarterPoints);
 

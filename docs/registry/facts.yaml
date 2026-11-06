@@ -178,6 +178,35 @@ rules:
       - Game/Plugins/GameFeatures/RubezhCore/Source/RubezhCoreRuntime/Public/Items/RubezhWeaponRules.h
     added: 2026-11-06
 
+  - name: Деньги
+    value: "билеты; число на счёте, без веса, при смерти не теряются; у нового персонажа 200"
+    status: active
+    source: docs/01_Канон.md#8
+    referenced_by:
+      - docs/gdd/00_Core_loop.md#5
+      - docs/gdd/01_Системы_прототипа.md#4
+      - Game/Plugins/GameFeatures/RubezhCore/Source/RubezhCoreRuntime/Public/RubezhSettings.h
+      - Game/Plugins/GameFeatures/RubezhCore/Source/RubezhCoreRuntime/Private/Items/RubezhTradeRules.cpp
+    added: 2026-11-06
+
+  - name: Правила сделок
+    value: "скупка 50 % цены; полный ремонт 30 % цены оружия; чистка +15 % за 10 с, не выше 70 %"
+    status: active
+    source: docs/gdd/01_Системы_прототипа.md#4
+    referenced_by:
+      - Game/Plugins/GameFeatures/RubezhCore/Source/RubezhCoreRuntime/Public/Items/RubezhTradeRules.h
+      - data/items.csv
+    added: 2026-11-06
+
+  - name: Торговцы поселения
+    value: "оружейник, медик, бронник, скупщик"
+    status: active
+    source: docs/gdd/01_Системы_прототипа.md#4
+    referenced_by:
+      - data/items.csv
+      - Game/Plugins/GameFeatures/RubezhCore/Source/RubezhCoreRuntime/Public/Items/RubezhTraderKind.h
+    added: 2026-11-06
+
 # ─── ПРЕДМЕТЫ ──────────────────────────────────────────────
 items:
   - name: Аптечка малая

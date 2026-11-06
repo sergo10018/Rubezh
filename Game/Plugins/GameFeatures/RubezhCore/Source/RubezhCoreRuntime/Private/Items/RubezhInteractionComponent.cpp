@@ -12,6 +12,7 @@
 #include "Items/RubezhWorldItem.h"
 #include "RubezhCoreRuntimeModule.h"
 #include "RubezhSettings.h"
+#include "Settlement/RubezhTrader.h"
 #include "UI/RubezhInventoryStyle.h"
 #include "UI/RubezhPickupPrompt.h"
 
@@ -28,6 +29,10 @@ namespace
 		if (const ARubezhWorldItem* Item = Cast<ARubezhWorldItem>(&Actor))
 		{
 			return Item->GetFocusLocation();
+		}
+		if (const ARubezhTrader* Trader = Cast<ARubezhTrader>(&Actor))
+		{
+			return Trader->GetFocusLocation();
 		}
 		return CastChecked<ARubezhLootContainer>(&Actor)->GetFocusLocation();
 	}
@@ -97,7 +102,7 @@ AActor* URubezhInteractionComponent::FindFocusedActor() const
 	for (const FOverlapResult& Overlap : Overlaps)
 	{
 		AActor* Candidate = Overlap.GetActor();
-		const bool bInteractive = Cast<ARubezhWorldItem>(Candidate) || Cast<ARubezhLootContainer>(Candidate);
+		const bool bInteractive = Cast<ARubezhWorldItem>(Candidate) || Cast<ARubezhLootContainer>(Candidate) || Cast<ARubezhTrader>(Candidate);
 		if (!bInteractive || !IsValid(Candidate))
 		{
 			continue;
@@ -155,6 +160,12 @@ void URubezhInteractionComponent::UpdatePrompt()
 	}
 
 	const AActor* Focused = FocusedActor.Get();
+	if (const ARubezhTrader* Trader = Cast<ARubezhTrader>(Focused))
+	{
+		const FString Key = GetDefault<URubezhSettings>()->InteractKey.GetDisplayName().ToString();
+		ShowPrompt(Trader->GetDisplayName(), FString::Printf(TEXT("%s — торговать"), *Key), false);
+		return;
+	}
 	if (const ARubezhLootContainer* Container = Cast<ARubezhLootContainer>(Focused))
 	{
 		ShowPrompt(Container->GetDisplayName(), DescribeContainerAction(*Container), false);
@@ -215,6 +226,13 @@ void URubezhInteractionComponent::Interact()
 	if (ARubezhWorldItem* Item = Cast<ARubezhWorldItem>(Focused))
 	{
 		ServerPickUp(Item);
+	}
+	else if (ARubezhTrader* Trader = Cast<ARubezhTrader>(Focused))
+	{
+		if (URubezhInventoryComponent* Inventory = URubezhInventoryComponent::FindForActor(GetPawn<APawn>()))
+		{
+			Inventory->ServerOpenTrader(Trader);
+		}
 	}
 	else if (ARubezhLootContainer* Container = Cast<ARubezhLootContainer>(Focused))
 	{

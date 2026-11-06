@@ -31,6 +31,7 @@
 #include "UI/RubezhEquipmentSlotWidget.h"
 #include "UI/RubezhInventoryStyle.h"
 #include "UI/RubezhSlotGridWidget.h"
+#include "UI/RubezhTraderPanel.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(RubezhInventoryWindow)
 
@@ -99,6 +100,10 @@ void URubezhInventoryWindow::BuildLayout()
 	Columns->AddChildToHorizontalBox(BuildEquipmentColumn())->SetPadding(FMargin(0.0f, 0.0f, ColumnGap, 0.0f));
 	Columns->AddChildToHorizontalBox(BuildBackpackColumn());
 	Columns->AddChildToHorizontalBox(BuildLootColumn())->SetPadding(FMargin(ColumnGap, 0.0f, 0.0f, 0.0f));
+
+	TraderPanel = CreateWidget<URubezhTraderPanel>(this);
+	TraderPanel->SetVisibility(ESlateVisibility::Collapsed);
+	Columns->AddChildToHorizontalBox(TraderPanel)->SetPadding(FMargin(ColumnGap, 0.0f, 0.0f, 0.0f));
 }
 
 UWidget* URubezhInventoryWindow::BuildEquipmentColumn()
@@ -150,6 +155,9 @@ UWidget* URubezhInventoryWindow::BuildBackpackColumn()
 	Column->AddChildToVerticalBox(HintBox);
 	ShowGroundHint(false);
 	AddSpacer(*WidgetTree, *Column, SectionSpacing);
+
+	MoneyText = MakeText(*WidgetTree, FText::GetEmpty(), TextFontSize);
+	Column->AddChildToVerticalBox(MoneyText);
 
 	WeightText = MakeText(*WidgetTree, FText::GetEmpty(), TextFontSize);
 	Column->AddChildToVerticalBox(WeightText);
@@ -232,6 +240,10 @@ void URubezhInventoryWindow::NativeOnDeactivated()
 		{
 			Inventory->ServerCloseLoot();
 		}
+		if (Inventory->GetTraderInUse())
+		{
+			Inventory->ServerCloseTrader();
+		}
 	}
 	BoundInventory.Reset();
 
@@ -274,7 +286,7 @@ bool URubezhInventoryWindow::IsLootOpen() const
 
 void URubezhInventoryWindow::Refresh()
 {
-	const URubezhInventoryComponent* Inventory = BoundInventory.Get();
+	URubezhInventoryComponent* Inventory = BoundInventory.Get();
 	if (!Inventory)
 	{
 		WeightText->SetText(FText::FromString(TEXT("Рюкзак не найден")));
@@ -282,9 +294,13 @@ void URubezhInventoryWindow::Refresh()
 	}
 
 	BackpackGrid->SetContents(Inventory->GetGrid(), [Inventory](FName Id) { return Inventory->FindDefinition(Id); });
+	MoneyText->SetText(FText::FromString(FString::Printf(TEXT("Билеты: %d"), Inventory->GetMoney())));
 	RefreshWeight(*Inventory);
 	RefreshEquipment(*Inventory);
 	RefreshLoot(*Inventory);
+
+	TraderPanel->SetVisibility(Inventory->GetTraderInUse() ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
+	TraderPanel->Refresh(*Inventory);
 }
 
 void URubezhInventoryWindow::RefreshLoot(const URubezhInventoryComponent& Inventory)
@@ -401,7 +417,7 @@ void URubezhInventoryWindow::Activate(ERubezhItemSource Source, int32 EntryIndex
 	{
 		BoundInventory->ServerUnloadMagazine(EntryIndex);
 	}
-	else if (Item && Rubezh::Injuries::IsMedical(*Item))
+	else if (Item && (Rubezh::Injuries::IsMedical(*Item) || Item->CleanPercent > 0.0f))
 	{
 		RequestUse(EntryIndex);
 	}

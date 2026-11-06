@@ -48,6 +48,10 @@ public:
 	UPROPERTY(Config, EditAnywhere, Category = "Items", Meta = (ClampMin = 0))
 	int32 StartingSpareMagazines = 1;
 
+	// Сколько билетов у нового персонажа.
+	UPROPERTY(Config, EditAnywhere, Category = "Items", Meta = (ClampMin = 0))
+	int32 StartingMoney = 200;
+
 	// Клавиша, открывающая и закрывающая окно рюкзака.
 	UPROPERTY(Config, EditAnywhere, Category = "Input")
 	FKey InventoryKey = EKeys::I;

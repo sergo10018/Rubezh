@@ -336,7 +336,22 @@ void URubezhInjuryComponent::ServerUseItem_Implementation(FName ItemId)
 	}
 
 	const FRubezhItemDefinition* Item = Inventory->FindDefinition(ItemId);
-	if (!Item || !IsUseful(*Item, State.Injuries, IsPainRelieved(), Health->GetHealth(), Health->GetMaxHealth()))
+	if (!Item)
+	{
+		return;
+	}
+
+	// Набор для чистки применяется как лекарство (время, занятые руки, трата в конце), но к оружию в руках.
+	if (Item->CleanPercent > 0.0f)
+	{
+		CleaningWeaponSlot = Inventory->GetActiveWeaponSlot();
+		CleaningWeaponItem = Inventory->GetWeaponInSlot(CleaningWeaponSlot);
+		if (Item->UseSeconds <= 0.0f || !Inventory->CanCleanWeapon(CleaningWeaponSlot))
+		{
+			return;
+		}
+	}
+	else if (!IsUseful(*Item, State.Injuries, IsPainRelieved(), Health->GetHealth(), Health->GetMaxHealth()))
 	{
 		return;
 	}
@@ -357,6 +372,17 @@ void URubezhInjuryComponent::FinishTreatment()
 	// Предмет тратится только в конце: прерванное лечение ничего не стоит.
 	URubezhInventoryComponent* Inventory = URubezhInventoryComponent::FindForActor(GetPawn<APawn>());
 	const FRubezhItemDefinition* Item = Inventory ? Inventory->FindDefinition(ItemId) : nullptr;
+	if (Item && Item->CleanPercent > 0.0f)
+	{
+		// Оружие могли убрать или заменить, пока шла чистка: тогда набор не тратится.
+		if (Inventory->CountItem(ItemId) >= 1 && Inventory->GetWeaponInSlot(CleaningWeaponSlot) == CleaningWeaponItem
+			&& Inventory->CleanWeapon(CleaningWeaponSlot, Item->CleanPercent))
+		{
+			Inventory->RemoveItem(ItemId, 1);
+		}
+		SyncInjuryTags();
+		return;
+	}
 	if (!Item || Inventory->RemoveItem(ItemId, 1) != 1)
 	{
 		SyncInjuryTags();

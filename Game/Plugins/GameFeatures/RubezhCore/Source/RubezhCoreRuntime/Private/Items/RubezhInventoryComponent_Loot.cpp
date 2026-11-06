@@ -71,6 +71,7 @@ void URubezhInventoryComponent::ServerStartSearch_Implementation(ARubezhLootCont
 
 	CloseLoot();
 	CancelSearch();
+	CloseTrader();
 	if (Container->WasSearchedBy(*this) || Container->GetSearchSeconds() <= 0.0f)
 	{
 		OpenLoot(*Container);

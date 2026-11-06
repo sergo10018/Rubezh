@@ -243,6 +243,7 @@ namespace
 				*Weapons[Index].ItemId.ToString(), Weapons[Index].Rounds, Weapons[Index].bHasMagazine ? 1 : 0, Weapons[Index].Durability);
 		}
 		const FRubezhInventoryGrid& Grid = Inventory->GetGrid();
+		UE_LOG(LogRubezh, Display, TEXT("Билеты: %d"), Inventory->GetMoney());
 		UE_LOG(LogRubezh, Display, TEXT("Рюкзак: занято %d из %d ячеек, вес %.2f кг"),
 			Grid.GetEntries().Num(), Grid.GetSlotCount(), Inventory->GetTotalWeight());
 		for (const FRubezhInventoryEntry& Entry : Grid.GetEntries())
@@ -332,6 +333,59 @@ namespace
 		if (Inventory && Args.Num() > 0)
 		{
 			Inventory->ServerDropWeapon(FCString::Atoi(*Args[0]));
+		}
+	}
+
+	/** Деньги и сделки — те же запросы, что шлёт окно торговца. */
+	void SetMoney(const TArray<FString>& Args, UWorld* World)
+	{
+		URubezhInventoryComponent* Inventory = (World && World->GetNetMode() != NM_Client) ? FindLocalInventory(World) : nullptr;
+		if (!Inventory || Args.Num() < 1)
+		{
+			UE_LOG(LogRubezh, Display, TEXT("Rubezh.Money <билеты> — задать счёт (только на сервере)"));
+			return;
+		}
+		Inventory->SetMoney(FCString::Atoi(*Args[0]));
+		UE_LOG(LogRubezh, Display, TEXT("Rubezh.Money: на счёте %d"), Inventory->GetMoney());
+	}
+
+	void BuyItem(const TArray<FString>& Args, UWorld* World)
+	{
+		URubezhInventoryComponent* Inventory = FindLocalInventory(World);
+		if (Inventory && Args.Num() > 0)
+		{
+			Inventory->ServerBuyItem(FName(*Args[0]), Args.Num() > 1 ? FCString::Atoi(*Args[1]) : 1);
+		}
+	}
+
+	void SellCell(const TArray<FString>& Args, UWorld* World)
+	{
+		URubezhInventoryComponent* Inventory = FindLocalInventory(World);
+		const int32 Cell = Args.Num() > 0 ? FCString::Atoi(*Args[0]) : INDEX_NONE;
+		const int32 Index = Inventory ? Inventory->GetGrid().FindEntryAt(Cell) : INDEX_NONE;
+		if (Index != INDEX_NONE)
+		{
+			Inventory->ServerSellEntry(Cell, Inventory->GetGrid().GetEntries()[Index].ItemId);
+		}
+	}
+
+	void RepairSlot(const TArray<FString>& Args, UWorld* World)
+	{
+		URubezhInventoryComponent* Inventory = FindLocalInventory(World);
+		if (Inventory && Args.Num() > 0)
+		{
+			Inventory->ServerRepairWeapon(FCString::Atoi(*Args[0]));
+		}
+	}
+
+	/** Применить предмет — тот же запрос, что двойной клик в рюкзаке. */
+	void UseInventoryItem(const TArray<FString>& Args, UWorld* World)
+	{
+		const APlayerController* Controller = World ? World->GetFirstPlayerController() : nullptr;
+		URubezhInjuryComponent* Injuries = Controller ? URubezhInjuryComponent::FindForActor(Controller->GetPawn()) : nullptr;
+		if (Injuries && Args.Num() > 0)
+		{
+			Injuries->UseItem(FName(*Args[0]));
 		}
 	}
 
@@ -474,6 +528,26 @@ namespace
 	FAutoConsoleCommandWithWorldAndArgs DropBagCommand(
 		TEXT("Rubezh.DropBag"), TEXT("Сбросить рюкзак вместе с вещами"),
 		FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&DropBackpack));
+
+	FAutoConsoleCommandWithWorldAndArgs MoneyCommand(
+		TEXT("Rubezh.Money"), TEXT("Задать счёт, билеты"),
+		FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&SetMoney));
+
+	FAutoConsoleCommandWithWorldAndArgs BuyCommand(
+		TEXT("Rubezh.Buy"), TEXT("Купить у открытого торговца: <id> [штук]"),
+		FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&BuyItem));
+
+	FAutoConsoleCommandWithWorldAndArgs SellCommand(
+		TEXT("Rubezh.Sell"), TEXT("Продать открытому торговцу стопку из ячейки: <ячейка>"),
+		FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&SellCell));
+
+	FAutoConsoleCommandWithWorldAndArgs RepairCommand(
+		TEXT("Rubezh.Repair"), TEXT("Починить у оружейника оружие в слоте: <слот 0-2>"),
+		FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&RepairSlot));
+
+	FAutoConsoleCommandWithWorldAndArgs UseCommand(
+		TEXT("Rubezh.Use"), TEXT("Применить предмет из рюкзака: Rubezh.Use <ItemId>"),
+		FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&UseInventoryItem));
 
 	FAutoConsoleCommandWithWorldAndArgs InventoryCommand(
 		TEXT("Rubezh.Inventory"), TEXT("Показать содержимое рюкзака и вес"),

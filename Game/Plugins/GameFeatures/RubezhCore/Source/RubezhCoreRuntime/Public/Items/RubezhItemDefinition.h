@@ -6,6 +6,7 @@
 #include "Health/RubezhInjury.h"
 #include "Items/RubezhEquipSlot.h"
 #include "Items/RubezhItemCategory.h"
+#include "Items/RubezhTraderKind.h"
 
 #include "RubezhItemDefinition.generated.h"
 
@@ -31,6 +32,24 @@ struct RUBEZHCORERUNTIME_API FRubezhItemDefinition : public FTableRowBase
 	// Сколько штук помещается в одну ячейку-стопку (любой предмет занимает одну ячейку).
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rubezh|Item", Meta = (ClampMin = 1))
 	int32 MaxStack = 1;
+
+	// --- Торговля ---
+
+	// Цена одной штуки у торговца, билеты. 0 — торговцы такой предмет не покупают и не продают.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rubezh|Item|Trade", Meta = (ClampMin = 0))
+	int32 Price = 0;
+
+	// Какой торговец работает с этим видом предметов.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rubezh|Item|Trade")
+	ERubezhTraderKind Trader = ERubezhTraderKind::None;
+
+	// Продаёт ли торговец предмет. false — только скупает: такой предмет можно лишь найти в зоне.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rubezh|Item|Trade")
+	bool bSoldByTrader = false;
+
+	// Набор для чистки: сколько процентов прочности возвращает оружию в руках (время — UseSeconds).
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rubezh|Item|Trade", Meta = (ClampMin = 0))
+	float CleanPercent = 0.0f;
 
 	// --- Магазин (у остальных None и 0) ---
 

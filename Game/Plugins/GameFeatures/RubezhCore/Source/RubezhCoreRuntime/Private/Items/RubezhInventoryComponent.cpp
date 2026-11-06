@@ -17,6 +17,8 @@
 #include "Net/UnrealNetwork.h"
 #include "RubezhCoreRuntimeModule.h"
 #include "RubezhSettings.h"
+#include "Settlement/RubezhSafeZone.h"
+#include "Settlement/RubezhTrader.h"
 #include "Survival/RubezhSurvivalSet.h"
 #include "TimerManager.h"
 
@@ -62,6 +64,8 @@ void URubezhInventoryComponent::GetLifetimeReplicatedProps(TArray<FLifetimePrope
 	DOREPLIFETIME_CONDITION(URubezhInventoryComponent, LootGrid, COND_OwnerOnly);
 	DOREPLIFETIME_CONDITION(URubezhInventoryComponent, SearchingContainer, COND_OwnerOnly);
 	DOREPLIFETIME_CONDITION(URubezhInventoryComponent, SearchFinishTime, COND_OwnerOnly);
+	DOREPLIFETIME_CONDITION(URubezhInventoryComponent, Money, COND_OwnerOnly);
+	DOREPLIFETIME_CONDITION(URubezhInventoryComponent, TraderInUse, COND_OwnerOnly);
 }
 
 void URubezhInventoryComponent::BeginPlay()
@@ -81,6 +85,7 @@ void URubezhInventoryComponent::BeginPlay()
 		Grid = FRubezhInventoryGrid(Settings->PocketSlots);
 		WeaponSlots.SetNum(Rubezh::Weapons::SlotCount);
 		WeaponInstances.SetNum(Rubezh::Weapons::SlotCount);
+		Money = Settings->StartingMoney;
 		ApplyStartingEquipment();
 		ApplyStartingWeapons();
 		BindReloadEvent();
@@ -115,6 +120,7 @@ void URubezhInventoryComponent::EndPlay(const EEndPlayReason::Type EndPlayReason
 	{
 		CloseLoot();
 		CancelSearch();
+		CloseTrader();
 		UnbindReloadEvent();
 	}
 	GetWorld()->GetTimerManager().ClearTimer(WeightSyncTimer);
@@ -224,6 +230,13 @@ Rubezh::Equipment::FProtection URubezhInventoryComponent::GetProtection(ERubezhB
 
 float URubezhInventoryComponent::GetIncomingDamageMultiplier(const UAbilitySystemComponent* Target, const FHitResult* Hit)
 {
+	// В поселении никого нельзя ранить, даже стреляя в него снаружи.
+	const AActor* TargetAvatar = Target ? Target->GetAvatarActor() : nullptr;
+	if (TargetAvatar && ARubezhSafeZone::IsInsideAny(TargetAvatar->GetWorld(), TargetAvatar->GetActorLocation()))
+	{
+		return 0.0f;
+	}
+
 	// Попадание в голову опаснее, в конечности — слабее; это верно и для целей без снаряжения.
 	const ERubezhBodyZone Zone = Hit ? Rubezh::Equipment::GetZoneForBone(Hit->BoneName) : ERubezhBodyZone::Torso;
 	const float ZoneMultiplier = Rubezh::Weapons::GetZoneDamageMultiplier(Zone);

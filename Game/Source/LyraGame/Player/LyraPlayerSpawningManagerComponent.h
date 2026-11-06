@@ -15,6 +15,9 @@ class APlayerStart;
 class ALyraPlayerStart;
 class AActor;
 
+/** Рубеж: сократить список точек появления до выбора точки (игроки — в поселении, боты — снаружи). */
+DECLARE_DELEGATE_TwoParams(FLyraPlayerStartFilter, AController* /*Player*/, TArray<ALyraPlayerStart*>& /*PlayerStarts*/);
+
 /**
  * @class ULyraPlayerSpawningManagerComponent
  */
@@ -25,6 +28,9 @@ class ULyraPlayerSpawningManagerComponent : public UGameStateComponent
 
 public:
 	UE_API ULyraPlayerSpawningManagerComponent(const FObjectInitializer& ObjectInitializer);
+
+	/** Рубеж: привязывает модуль RubezhCoreRuntime. */
+	static UE_API FLyraPlayerStartFilter& GetPlayerStartFilter();
 
 	/** UActorComponent */
 	UE_API virtual void InitializeComponent() override;

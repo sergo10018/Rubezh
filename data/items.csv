@@ -1,45 +1,45 @@
----,DisplayName,Category,WeightKg,MaxStack,UseSeconds,HealPercent,DelayedHealPercent,DelayedHealSeconds,Cures,PainReliefSeconds,EquipSlot,Protection,BleedProtection,Warmth,BackpackSlots,CarryBonusKg,AmmoItem,MagazineCapacity
-pistol_9x18,Пистолет 9×18,Equipment,0.73,1,0,0,0,0,None,0,None,0,0,0,0,0,ammo_9x18,0
-rifle_762x39,"Автомат 7,62×39",Equipment,3.6,1,0,0,0,0,None,0,None,0,0,0,0,0,ammo_762x39,0
-shotgun_12,Дробовик помповый 12 к.,Equipment,3.4,1,0,0,0,0,None,0,None,0,0,0,0,0,ammo_12_70,0
-rifle_762x54r,"Снайперская винтовка 7,62×54R",Equipment,4.3,1,0,0,0,0,None,0,None,0,0,0,0,0,ammo_762x54r,0
-cap_knit,Шапка вязаная,Equipment,0.1,1,0,0,0,0,None,0,Head,0,5,2,0,0,None,0
-helmet_ssh68,Каска СШ-68,Equipment,1.3,1,0,0,0,0,None,0,Head,25,30,0,0,0,None,0
-helmet_6b7,Шлем 6Б7-1М,Equipment,1.5,1,0,0,0,0,None,0,Head,40,50,0,0,0,None,0
-armor_kora,Бронежилет скрытого ношения «Кора-Кулон»,Equipment,3.5,1,0,0,0,0,None,0,Armor,25,35,1,0,0,None,0
-armor_vest,Бронежилет 6Б23,Equipment,8,1,0,0,0,0,None,0,Armor,45,55,1,0,0,None,0
-armor_6b43,Бронежилет штурмовой 6Б43,Equipment,15,1,0,0,0,0,None,0,Armor,60,70,1,0,0,None,0
-jacket_windbreaker,Ветровка,Equipment,0.5,1,0,0,0,0,None,0,Top,3,5,1,0,0,None,0
-jacket_gorka,Куртка «Горка»,Equipment,1.4,1,0,0,0,0,None,0,Top,6,12,2,0,0,None,0
-jacket_padded,Телогрейка,Equipment,2.2,1,0,0,0,0,None,0,Top,8,15,4,0,0,None,0
-pants_work,Рабочие брюки,Equipment,0.6,1,0,0,0,0,None,0,Bottom,3,5,1,0,0,None,0
-pants_gorka,Брюки «Горка»,Equipment,1,1,0,0,0,0,None,0,Bottom,6,12,2,0,0,None,0
-pants_padded,Ватные штаны,Equipment,1.8,1,0,0,0,0,None,0,Bottom,8,15,4,0,0,None,0
-backpack_sack,Вещмешок,Equipment,0.6,1,0,0,0,0,None,0,Backpack,0,0,0,12,2,None,0
-backpack_tourist,Рюкзак туристический,Equipment,1.2,1,0,0,0,0,None,0,Backpack,0,0,0,20,2,None,0
-backpack_rd54,Рюкзак десантный РД-54,Equipment,1.6,1,0,0,0,0,None,0,Backpack,0,0,0,16,6,None,0
-backpack_raid,Рюкзак рейдовый 6Ш118,Equipment,3,1,0,0,0,0,None,0,Backpack,0,0,0,24,8,None,0
-ammo_9x18,Патроны 9×18,Ammo,0.01,50,0,0,0,0,None,0,None,0,0,0,0,0,None,0
-ammo_762x39,"Патроны 7,62×39",Ammo,0.016,60,0,0,0,0,None,0,None,0,0,0,0,0,None,0
-ammo_12_70,Патроны 12/70,Ammo,0.04,20,0,0,0,0,None,0,None,0,0,0,0,0,None,0
-ammo_762x54r,"Патроны 7,62×54R",Ammo,0.022,40,0,0,0,0,None,0,None,0,0,0,0,0,None,0
-mag_9x18,Магазин ПМ (9×18),Equipment,0.1,1,0,0,0,0,None,0,None,0,0,0,0,0,ammo_9x18,8
-mag_762x39,"Магазин АК (7,62×39)",Equipment,0.33,1,0,0,0,0,None,0,None,0,0,0,0,0,ammo_762x39,30
-mag_762x54r,"Магазин СВД (7,62×54R)",Equipment,0.21,1,0,0,0,0,None,0,None,0,0,0,0,0,ammo_762x54r,10
-bandage,Бинт,Consumable,0.05,5,3,0,0,0,Bleeding,0,None,0,0,0,0,0,None,0
-tourniquet,Жгут,Consumable,0.1,3,4,0,0,0,HeavyBleeding,0,None,0,0,0,0,0,None,0
-splint,Шина,Consumable,0.3,1,6,0,0,0,LegFracture,0,None,0,0,0,0,0,None,0
-painkillers,Обезболивающее,Consumable,0.05,10,2,0,0,0,None,120,None,0,0,0,0,0,None,0
-medkit_small,Аптечка малая,Consumable,0.3,1,4,15,10,5,None,0,None,0,0,0,0,0,None,0
-medkit_army,Аптечка армейская,Consumable,0.8,1,7,40,20,5,None,0,None,0,0,0,0,0,None,0
-canned_meat,Тушёнка,Consumable,0.4,1,0,0,0,0,None,0,None,0,0,0,0,0,None,0
-water_bottle,"Вода 0,5 л",Consumable,0.55,1,0,0,0,0,None,0,None,0,0,0,0,0,None,0
-cleaning_kit,Набор для чистки оружия,Consumable,0.3,1,0,0,0,0,None,0,None,0,0,0,0,0,None,0
-scrap_metal,Металлолом,Junk,1.5,1,0,0,0,0,None,0,None,0,0,0,0,0,None,0
-copper_wire,Медный провод,Junk,0.5,5,0,0,0,0,None,0,None,0,0,0,0,0,None,0
-bolts,Болты и гайки,Junk,0.2,20,0,0,0,0,None,0,None,0,0,0,0,0,None,0
-circuit_board,Электронная плата,Junk,0.15,5,0,0,0,0,None,0,None,0,0,0,0,0,None,0
-documents,Документы,Valuable,0.1,1,0,0,0,0,None,0,None,0,0,0,0,0,None,0
-tool_set,Набор инструментов,Valuable,2.5,1,0,0,0,0,None,0,None,0,0,0,0,0,None,0
-car_battery,Автомобильный аккумулятор,Valuable,13.0,1,0,0,0,0,None,0,None,0,0,0,0,0,None,0
-fuel_canister,Канистра с топливом,Valuable,11.0,1,0,0,0,0,None,0,None,0,0,0,0,0,None,0
+---,DisplayName,Category,WeightKg,MaxStack,Price,Trader,bSoldByTrader,CleanPercent,UseSeconds,HealPercent,DelayedHealPercent,DelayedHealSeconds,Cures,PainReliefSeconds,EquipSlot,Protection,BleedProtection,Warmth,BackpackSlots,CarryBonusKg,AmmoItem,MagazineCapacity
+pistol_9x18,Пистолет 9×18,Equipment,0.73,1,400,Gunsmith,True,0,0,0,0,0,None,0,None,0,0,0,0,0,ammo_9x18,0
+rifle_762x39,"Автомат 7,62×39",Equipment,3.6,1,1500,Gunsmith,True,0,0,0,0,0,None,0,None,0,0,0,0,0,ammo_762x39,0
+shotgun_12,Дробовик помповый 12 к.,Equipment,3.4,1,900,Gunsmith,True,0,0,0,0,0,None,0,None,0,0,0,0,0,ammo_12_70,0
+rifle_762x54r,"Снайперская винтовка 7,62×54R",Equipment,4.3,1,3000,Gunsmith,False,0,0,0,0,0,None,0,None,0,0,0,0,0,ammo_762x54r,0
+cap_knit,Шапка вязаная,Equipment,0.1,1,30,Armorer,True,0,0,0,0,0,None,0,Head,0,5,2,0,0,None,0
+helmet_ssh68,Каска СШ-68,Equipment,1.3,1,200,Armorer,True,0,0,0,0,0,None,0,Head,25,30,0,0,0,None,0
+helmet_6b7,Шлем 6Б7-1М,Equipment,1.5,1,600,Armorer,False,0,0,0,0,0,None,0,Head,40,50,0,0,0,None,0
+armor_kora,Бронежилет скрытого ношения «Кора-Кулон»,Equipment,3.5,1,500,Armorer,True,0,0,0,0,0,None,0,Armor,25,35,1,0,0,None,0
+armor_vest,Бронежилет 6Б23,Equipment,8,1,1200,Armorer,True,0,0,0,0,0,None,0,Armor,45,55,1,0,0,None,0
+armor_6b43,Бронежилет штурмовой 6Б43,Equipment,15,1,2500,Armorer,False,0,0,0,0,0,None,0,Armor,60,70,1,0,0,None,0
+jacket_windbreaker,Ветровка,Equipment,0.5,1,40,Armorer,True,0,0,0,0,0,None,0,Top,3,5,1,0,0,None,0
+jacket_gorka,Куртка «Горка»,Equipment,1.4,1,150,Armorer,True,0,0,0,0,0,None,0,Top,6,12,2,0,0,None,0
+jacket_padded,Телогрейка,Equipment,2.2,1,100,Armorer,True,0,0,0,0,0,None,0,Top,8,15,4,0,0,None,0
+pants_work,Рабочие брюки,Equipment,0.6,1,30,Armorer,True,0,0,0,0,0,None,0,Bottom,3,5,1,0,0,None,0
+pants_gorka,Брюки «Горка»,Equipment,1,1,120,Armorer,True,0,0,0,0,0,None,0,Bottom,6,12,2,0,0,None,0
+pants_padded,Ватные штаны,Equipment,1.8,1,80,Armorer,True,0,0,0,0,0,None,0,Bottom,8,15,4,0,0,None,0
+backpack_sack,Вещмешок,Equipment,0.6,1,60,Armorer,True,0,0,0,0,0,None,0,Backpack,0,0,0,12,2,None,0
+backpack_tourist,Рюкзак туристический,Equipment,1.2,1,250,Armorer,True,0,0,0,0,0,None,0,Backpack,0,0,0,20,2,None,0
+backpack_rd54,Рюкзак десантный РД-54,Equipment,1.6,1,400,Armorer,True,0,0,0,0,0,None,0,Backpack,0,0,0,16,6,None,0
+backpack_raid,Рюкзак рейдовый 6Ш118,Equipment,3,1,1000,Armorer,False,0,0,0,0,0,None,0,Backpack,0,0,0,24,8,None,0
+ammo_9x18,Патроны 9×18,Ammo,0.01,50,2,Gunsmith,True,0,0,0,0,0,None,0,None,0,0,0,0,0,None,0
+ammo_762x39,"Патроны 7,62×39",Ammo,0.016,60,4,Gunsmith,True,0,0,0,0,0,None,0,None,0,0,0,0,0,None,0
+ammo_12_70,Патроны 12/70,Ammo,0.04,20,5,Gunsmith,True,0,0,0,0,0,None,0,None,0,0,0,0,0,None,0
+ammo_762x54r,"Патроны 7,62×54R",Ammo,0.022,40,8,Gunsmith,True,0,0,0,0,0,None,0,None,0,0,0,0,0,None,0
+mag_9x18,Магазин ПМ (9×18),Equipment,0.1,1,40,Gunsmith,True,0,0,0,0,0,None,0,None,0,0,0,0,0,ammo_9x18,8
+mag_762x39,"Магазин АК (7,62×39)",Equipment,0.33,1,80,Gunsmith,True,0,0,0,0,0,None,0,None,0,0,0,0,0,ammo_762x39,30
+mag_762x54r,"Магазин СВД (7,62×54R)",Equipment,0.21,1,100,Gunsmith,True,0,0,0,0,0,None,0,None,0,0,0,0,0,ammo_762x54r,10
+bandage,Бинт,Consumable,0.05,5,15,Medic,True,0,3,0,0,0,Bleeding,0,None,0,0,0,0,0,None,0
+tourniquet,Жгут,Consumable,0.1,3,40,Medic,True,0,4,0,0,0,HeavyBleeding,0,None,0,0,0,0,0,None,0
+splint,Шина,Consumable,0.3,1,50,Medic,True,0,6,0,0,0,LegFracture,0,None,0,0,0,0,0,None,0
+painkillers,Обезболивающее,Consumable,0.05,10,20,Medic,True,0,2,0,0,0,None,120,None,0,0,0,0,0,None,0
+medkit_small,Аптечка малая,Consumable,0.3,1,80,Medic,True,0,4,15,10,5,None,0,None,0,0,0,0,0,None,0
+medkit_army,Аптечка армейская,Consumable,0.8,1,250,Medic,False,0,7,40,20,5,None,0,None,0,0,0,0,0,None,0
+canned_meat,Тушёнка,Consumable,0.4,1,20,Scavenger,True,0,0,0,0,0,None,0,None,0,0,0,0,0,None,0
+water_bottle,"Вода 0,5 л",Consumable,0.55,1,10,Scavenger,True,0,0,0,0,0,None,0,None,0,0,0,0,0,None,0
+cleaning_kit,Набор для чистки оружия,Consumable,0.3,1,60,Gunsmith,True,15,10,0,0,0,None,0,None,0,0,0,0,0,None,0
+scrap_metal,Металлолом,Junk,1.5,1,8,Scavenger,False,0,0,0,0,0,None,0,None,0,0,0,0,0,None,0
+copper_wire,Медный провод,Junk,0.5,5,12,Scavenger,False,0,0,0,0,0,None,0,None,0,0,0,0,0,None,0
+bolts,Болты и гайки,Junk,0.2,20,2,Scavenger,False,0,0,0,0,0,None,0,None,0,0,0,0,0,None,0
+circuit_board,Электронная плата,Junk,0.15,5,40,Scavenger,False,0,0,0,0,0,None,0,None,0,0,0,0,0,None,0
+documents,Документы,Valuable,0.1,1,150,Scavenger,False,0,0,0,0,0,None,0,None,0,0,0,0,0,None,0
+tool_set,Набор инструментов,Valuable,2.5,1,200,Scavenger,False,0,0,0,0,0,None,0,None,0,0,0,0,0,None,0
+car_battery,Автомобильный аккумулятор,Valuable,13.0,1,180,Scavenger,False,0,0,0,0,0,None,0,None,0,0,0,0,0,None,0
+fuel_canister,Канистра с топливом,Valuable,11.0,1,200,Scavenger,False,0,0,0,0,0,None,0,None,0,0,0,0,0,None,0

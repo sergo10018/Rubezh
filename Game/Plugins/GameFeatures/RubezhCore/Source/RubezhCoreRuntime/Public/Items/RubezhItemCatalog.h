@@ -16,6 +16,9 @@ namespace Rubezh::Items
 	/** Характеристики оружия из DT_Weapons; nullptr — предмет не оружие или таблица не задана. */
 	RUBEZHCORERUNTIME_API const FRubezhWeaponDefinition* FindWeapon(FName ItemId);
 
+	/** Идентификаторы всех предметов в порядке таблицы; пусто — таблица не задана. */
+	RUBEZHCORERUNTIME_API TArray<FName> GetItemIds();
+
 	/** Все строки таблицы лута (DT_LootTables); пусто — таблица не задана. */
 	RUBEZHCORERUNTIME_API TArray<FRubezhLootTableRow> GetLootRows();
 }
