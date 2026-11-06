@@ -22,6 +22,6 @@ enum class ERubezhItemCategory : uint8
 
 namespace Rubezh::Items
 {
-	/** Остаётся ли на теле вся стопка при смерти. Экипировка сохраняется, патроны теряются частично, остальное — ставка вылазки. */
+	/** Может ли стопка целиком уйти на тело при смерти (шанс — Rubezh::Loot). Экипировка сохраняется, патроны теряются частично. */
 	RUBEZHCORERUNTIME_API bool IsLostOnDeath(ERubezhItemCategory Category);
 }

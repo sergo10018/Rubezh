@@ -56,24 +56,25 @@ namespace Rubezh::Loot
 	RUBEZHCORERUNTIME_API int32 Transfer(FRubezhInventoryGrid& From, int32 EntryIndex, FRubezhInventoryGrid& To,
 		TOptional<int32> TargetSlot, FRubezhItemLookup Lookup);
 
-	// Патроны при смерти (docs/gdd/00_Core_loop.md §4): с этим шансом выпадает эта доля патронов из рюкзака.
-	inline constexpr float DeathAmmoLossChancePercent = 30.0f;
+	// Смерть (docs/gdd/00_Core_loop.md §4): шанс выпадения. Для стопки — свой бросок на каждую, для патронов — один на смерть.
+	inline constexpr float DeathDropChancePercent = 30.0f;
+	// Какая доля патронов выпадает, если бросок удался.
 	inline constexpr float DeathAmmoLossMinPercent = 5.0f;
 	inline constexpr float DeathAmmoLossMaxPercent = 7.0f;
 
-	/** Сколько патронов выпадает из Total при доле Percent: по правилам округления, но хотя бы один, если патроны есть. */
+	/** Сколько патронов выпадает из Total при доле Percent, с обычным округлением: из маленького запаса может не выпасть ни одного. */
 	RUBEZHCORERUNTIME_API int32 ComputeAmmoLoss(int32 Total, float Percent);
 
 	/**
 	 * Вынуть из рюкзака Percent % патронов каждого калибра, считая и лежащие в магазинах: сначала россыпью,
-	 * потом из наименее полных магазинов. Сами магазины и патроны внутри оружия остаются. Возвращает вынутое.
+	 * потом из наименее полных магазинов. Сами магазины и патроны внутри оружия остаются. Возвращает вынутое (без нулей).
 	 */
 	RUBEZHCORERUNTIME_API TArray<FDrop> TakeAmmoLoss(FRubezhInventoryGrid& Grid, FRubezhItemLookup Lookup, float Percent);
 
 	/**
-	 * Вынуть из рюкзака всё, что теряется при смерти (docs/gdd/00_Core_loop.md §4: расходники, хлам, ценности и,
-	 * с шансом DeathAmmoLossChancePercent, часть патронов), и вернуть отдельным набором ячеек — это ляжет на тело.
-	 * Экипировка, магазины и неизвестные предметы остаются у игрока. Шанс и доля разыгрываются один раз на смерть.
+	 * Вынуть из рюкзака то, что выпало при смерти (docs/gdd/00_Core_loop.md §4), и вернуть отдельным набором ячеек —
+	 * это ляжет на тело. Каждая стопка расходников, хлама и ценностей уходит целиком с шансом DeathDropChancePercent;
+	 * с тем же шансом, одним броском на смерть, выпадает часть патронов. Экипировка, магазины и неизвестные предметы остаются.
 	 */
 	RUBEZHCORERUNTIME_API FRubezhInventoryGrid TakeLostOnDeath(FRubezhInventoryGrid& Grid, FRubezhItemLookup Lookup, FRandomStream& Random);
 }

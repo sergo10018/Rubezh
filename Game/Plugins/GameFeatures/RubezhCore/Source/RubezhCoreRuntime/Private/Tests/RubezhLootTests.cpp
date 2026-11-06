@@ -147,23 +147,42 @@ bool FRubezhLootDeathTest::RunTest(const FString& Parameters)
 	const FLootCatalog Catalog;
 	auto Lookup = [&Catalog](FName Id) { return Catalog.Find(Id); };
 
-	FRubezhInventoryGrid Backpack(12);
-	Backpack.AddEntryAt(TEXT("rifle"), 1, 0, Lookup);
-	Backpack.AddEntryAt(TEXT("bandage"), 3, 2, Lookup);
-	Backpack.AddEntryAt(TEXT("scrap"), 1, 5, Lookup);
-	Backpack.AddEntryAt(TEXT("documents"), 1, 7, Lookup);
-
+	constexpr int32 Deaths = 2000;
+	int32 BandageDrops = 0;
+	int32 ScrapDrops = 0;
+	int32 DocumentDrops = 0;
+	int32 BothDrops = 0;
 	FRandomStream Random(1);
-	const FRubezhInventoryGrid Body = TakeLostOnDeath(Backpack, Lookup, Random);
-	TestEqual(TEXT("На теле бинты, хлам и документы"), Body.GetEntries().Num(), 3);
-	TestEqual(TEXT("…ровно три ячейки"), Body.GetSlotCount(), 3);
-	TestEqual(TEXT("…бинтов 3"), Body.CountItem(TEXT("bandage")), 3);
-	TestEqual(TEXT("…разложены с первой ячейки"), Body.GetEntries()[0].Slot, 0);
+	for (int32 Death = 0; Death < Deaths; ++Death)
+	{
+		FRubezhInventoryGrid Backpack(12);
+		Backpack.AddEntryAt(TEXT("rifle"), 1, 0, Lookup);
+		Backpack.AddEntryAt(TEXT("bandage"), 3, 2, Lookup);
+		Backpack.AddEntryAt(TEXT("scrap"), 1, 5, Lookup);
+		Backpack.AddEntryAt(TEXT("documents"), 1, 7, Lookup);
 
-	TestEqual(TEXT("У игрока остался автомат (экипировка)"), Backpack.CountItem(TEXT("rifle")), 1);
-	TestEqual(TEXT("…на своём месте"), Backpack.GetEntries()[0].Slot, 0);
-	TestEqual(TEXT("…и больше ничего"), Backpack.GetEntries().Num(), 1);
-	TestEqual(TEXT("Рюкзак не уменьшился"), Backpack.GetSlotCount(), 12);
+		const FRubezhInventoryGrid Body = TakeLostOnDeath(Backpack, Lookup, Random);
+		const int32 BandagesOnBody = Body.CountItem(TEXT("bandage"));
+		TestTrue(TEXT("Стопка бинтов уходит только целиком"), BandagesOnBody == 0 || BandagesOnBody == 3);
+		TestEqual(TEXT("Бинты не размножились и не пропали"), BandagesOnBody + Backpack.CountItem(TEXT("bandage")), 3);
+		TestEqual(TEXT("Автомат (экипировка) всегда остаётся"), Backpack.CountItem(TEXT("rifle")), 1);
+		TestEqual(TEXT("…на своём месте"), Backpack.GetEntries()[0].Slot, 0);
+		TestEqual(TEXT("На теле ровно столько ячеек, сколько стопок"), Body.GetSlotCount(), Body.GetEntries().Num());
+		TestEqual(TEXT("Рюкзак не уменьшился"), Backpack.GetSlotCount(), 12);
+
+		const bool bBandage = BandagesOnBody > 0;
+		const bool bScrap = Body.CountItem(TEXT("scrap")) > 0;
+		BandageDrops += bBandage ? 1 : 0;
+		ScrapDrops += bScrap ? 1 : 0;
+		DocumentDrops += Body.CountItem(TEXT("documents"));
+		BothDrops += bBandage && bScrap ? 1 : 0;
+	}
+
+	const auto IsAboutThirtyPercent = [](int32 Count) { return Count > Deaths * 27 / 100 && Count < Deaths * 33 / 100; };
+	TestTrue(TEXT("Медицина выпадает примерно в 30 %"), IsAboutThirtyPercent(BandageDrops));
+	TestTrue(TEXT("Хлам выпадает примерно в 30 %"), IsAboutThirtyPercent(ScrapDrops));
+	TestTrue(TEXT("Ценности выпадают примерно в 30 %"), IsAboutThirtyPercent(DocumentDrops));
+	TestTrue(TEXT("Каждая стопка бросает свой шанс: обе — примерно в 9 %"), BothDrops > Deaths * 6 / 100 && BothDrops < Deaths * 12 / 100);
 
 	FRubezhInventoryGrid OnlyGear(4);
 	OnlyGear.AddEntryAt(TEXT("rifle"), 1, 0, Lookup);
@@ -179,7 +198,8 @@ bool FRubezhLootAmmoAmountTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("100 патронов, 5 %"), ComputeAmmoLoss(100, 5.0f), 5);
 	TestEqual(TEXT("100 патронов, 7 %"), ComputeAmmoLoss(100, 7.0f), 7);
 	TestEqual(TEXT("Округление: 55 патронов, 5 % — 3"), ComputeAmmoLoss(55, 5.0f), 3);
-	TestEqual(TEXT("Мало патронов — всё равно один"), ComputeAmmoLoss(8, 5.0f), 1);
+	TestEqual(TEXT("Мало патронов — может не выпасть ни одного"), ComputeAmmoLoss(8, 5.0f), 0);
+	TestEqual(TEXT("…а может один"), ComputeAmmoLoss(8, 7.0f), 1);
 	TestEqual(TEXT("Нет патронов — ничего"), ComputeAmmoLoss(0, 7.0f), 0);
 	return true;
 }
@@ -209,6 +229,11 @@ bool FRubezhLootAmmoTakeTest::RunTest(const FString& Parameters)
 	FRubezhInventoryGrid Empty(2);
 	Empty.PlaceEntry(MakeLoadedMagazine(0, 0), 0);
 	TestEqual(TEXT("Пустой магазин ничего не теряет"), TakeAmmoLoss(Empty, Lookup, 7.0f).Num(), 0);
+
+	FRubezhInventoryGrid Few(2);
+	Few.AddEntryAt(TEXT("ammo"), 3, 0, Lookup);
+	TestEqual(TEXT("Из 3 патронов при 5 % не выпадает ничего"), TakeAmmoLoss(Few, Lookup, 5.0f).Num(), 0);
+	TestEqual(TEXT("…и они на месте"), Few.CountItem(TEXT("ammo")), 3);
 	return true;
 }
 

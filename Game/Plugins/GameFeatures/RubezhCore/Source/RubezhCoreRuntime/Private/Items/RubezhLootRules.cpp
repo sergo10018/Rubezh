@@ -62,11 +62,7 @@ namespace Rubezh::Loot
 
 	int32 ComputeAmmoLoss(int32 Total, float Percent)
 	{
-		if (Total <= 0 || Percent <= 0.0f)
-		{
-			return 0;
-		}
-		return FMath::Clamp(FMath::RoundToInt32(Total * Percent / 100.0f), 1, Total);
+		return FMath::Clamp(FMath::RoundToInt32(FMath::Max(Total, 0) * Percent / 100.0f), 0, FMath::Max(Total, 0));
 	}
 
 	namespace
@@ -139,6 +135,11 @@ namespace Rubezh::Loot
 		for (const FDrop& Calibre : Calibres)
 		{
 			const int32 Count = ComputeAmmoLoss(Calibre.Count, Percent);
+			if (Count == 0)
+			{
+				continue;
+			}
+
 			const int32 Loose = Grid.RemoveItem(Calibre.ItemId, Count);
 			TakeRoundsFromMagazines(Grid, Lookup, Calibre.ItemId, Count - Loose);
 			Lost.Add({ Calibre.ItemId, Count });
@@ -149,13 +150,14 @@ namespace Rubezh::Loot
 	FRubezhInventoryGrid TakeLostOnDeath(FRubezhInventoryGrid& Grid, FRubezhItemLookup Lookup, FRandomStream& Random)
 	{
 		// Неизвестный предмет (удалён из таблицы) остаётся у игрока — не теряем его молча.
-		TArray<FRubezhInventoryEntry> Lost = Grid.ExtractEntries([&Lookup](const FRubezhInventoryEntry& Entry)
+		const auto RollDrop = [&Random]() { return Random.FRandRange(0.0f, 100.0f) < DeathDropChancePercent; };
+		TArray<FRubezhInventoryEntry> Lost = Grid.ExtractEntries([&Lookup, &RollDrop](const FRubezhInventoryEntry& Entry)
 		{
 			const FRubezhItemDefinition* Definition = Lookup(Entry.ItemId);
-			return Definition && Rubezh::Items::IsLostOnDeath(Definition->Category);
+			return Definition && Rubezh::Items::IsLostOnDeath(Definition->Category) && RollDrop();
 		});
 
-		if (Random.FRandRange(0.0f, 100.0f) < DeathAmmoLossChancePercent)
+		if (RollDrop())
 		{
 			const float Percent = Random.FRandRange(DeathAmmoLossMinPercent, DeathAmmoLossMaxPercent);
 			for (const FDrop& Drop : TakeAmmoLoss(Grid, Lookup, Percent))
